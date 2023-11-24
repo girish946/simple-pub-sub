@@ -33,6 +33,17 @@ pub async fn handle_clinet(mut socket: TcpStream) {
                 }
             };
             info!("{:?}", header);
+
+            let topic: String =
+                match String::from_utf8(pkt_buf[8..(8 + header.topic_length).into()].to_vec()) {
+                    Ok(topic) => topic,
+                    Err(_e) => {
+                        error!("unable to parse topic, topic needs to be in utf-8");
+                        "".to_string()
+                    }
+                };
+            info!("topic: {}", topic);
+
             let message_position: usize =
                 ((8 + header.topic_length) as u16 + header.message_length).into();
 
@@ -58,15 +69,6 @@ pub async fn handle_clinet(mut socket: TcpStream) {
 
                 pkt_buf.extend(buf);
             }
-            let topic: String =
-                match String::from_utf8(pkt_buf[8..(8 + header.topic_length).into()].to_vec()) {
-                    Ok(topic) => topic,
-                    Err(_e) => {
-                        error!("unable to parse topic, topic needs to be in utf-8");
-                        "".to_string()
-                    }
-                };
-            info!("topic: {}", topic);
             socket
                 .write_all(&pkt_buf[(8 + header.topic_length).into()..message_position])
                 .await
