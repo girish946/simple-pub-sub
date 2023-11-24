@@ -1,10 +1,12 @@
-use tokio::net::TcpListener;
-
+pub mod client_handler;
+pub mod message;
 use log::info;
-
 use std::env;
 use std::error::Error;
+use tokio::net::TcpListener;
+
 pub const LOG_LEVEL: &str = "trace";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env::set_var("RUST_LOG", LOG_LEVEL);
@@ -19,5 +21,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     loop {
         let (socket, addr) = listener.accept().await?;
         info!("addr is: {addr}");
+        client_handler::handle_clinet(socket).await;
     }
 }
