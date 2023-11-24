@@ -53,7 +53,7 @@ impl Header {
             return Err(HeaderError::InvalidHeaderBufferLength);
         }
 
-        if !bytes[0] == 0x00 && bytes[7] == 0x00 {
+        if !(bytes[0] == 0x0F && bytes[7] == 0x00) {
             error!("invalid header value, aborting");
             return Err(HeaderError::InvalidHeadOrTail);
         }
@@ -75,7 +75,7 @@ impl Header {
             }
         };
 
-        if bytes[5] == 0 {
+        if bytes[4] == 0 {
             match pkt_type {
                 PktType::REGISTER => {
                     error!("invalid topic length, aborting");
@@ -85,7 +85,8 @@ impl Header {
             };
         }
 
-        let message_length = ((bytes[3] as u16) << 8) | bytes[4] as u16;
+        let message_length = ((bytes[5] as u16) << 8) | bytes[6] as u16;
+
         if message_length == 0 {
             match pkt_type {
                 PktType::PUBLISH => {
@@ -100,10 +101,10 @@ impl Header {
             };
         }
         return Ok(Header {
-            header: 0x00,
+            header: 0x0F,
             version: [bytes[1], bytes[2]],
             pkt_type,
-            topic_length: bytes[5],
+            topic_length: bytes[4],
             message_length,
             padding: 0x00,
         });

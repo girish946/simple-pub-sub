@@ -1,5 +1,5 @@
 use crate::message;
-use log::{error, info};
+use log::{debug, error, info};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 
@@ -24,16 +24,19 @@ pub async fn handle_clinet(mut socket: TcpStream) {
             if n == 0 {
                 return;
             }
+            debug!("incoming pkt: {:?}", pkt_buf[..8].to_vec().clone());
             let header: message::Header = match message::Header::from_vec(pkt_buf[..8].to_vec()) {
                 Ok(h) => h,
-                Err(e) => {
+                Err(_e) => {
                     error!("could not parse header aborting");
                     return;
                 }
             };
-            println!("header is :{:?}", header);
+            info!("{:?}", header);
+            let message_position: usize =
+                ((8 + header.topic_length) as u16 + header.message_length).into();
             socket
-                .write_all(&pkt_buf)
+                .write_all(&pkt_buf[(8 + header.topic_length).into()..message_position])
                 .await
                 .expect("failed to write data to socket");
         }
