@@ -39,7 +39,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             else:
                 topic = "test"
                 data = topic_and_msg[0]
-            data  = get_packet(data, topic)
+            data  = get_packet(data*2049, topic)
             print(data)
             n = s.send(data)
             print(n, "bytes sent")
