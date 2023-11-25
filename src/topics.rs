@@ -26,7 +26,7 @@ pub async fn topic_manager(chan: Sender<String>) {
                     Some(client) => client.clone(),
                     None => 0,
                 };
-                topics_map.insert(topic, clients);
+                topics_map.insert(topic, clients + 1);
             } else {
                 topics_map.insert(topic, 0);
                 info!("new topic, adding it to the hashmap");
