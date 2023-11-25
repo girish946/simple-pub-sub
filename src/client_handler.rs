@@ -2,8 +2,9 @@ use crate::message;
 use log::{debug, error, info};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
+use tokio::sync::broadcast::Sender;
 
-pub async fn handle_clinet(mut socket: TcpStream) {
+pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<String>) {
     tokio::spawn(async move {
         let mut pkt_buf: Vec<u8>;
         loop {
@@ -43,6 +44,16 @@ pub async fn handle_clinet(mut socket: TcpStream) {
                     }
                 };
             info!("topic: {}", topic);
+            match chan.send(topic) {
+                Ok(n) => n,
+                Err(e) => {
+                    error!(
+                        "error while checking the topic in the map: {}",
+                        e.to_string()
+                    );
+                    0
+                }
+            };
 
             let message_position: usize =
                 ((8 + header.topic_length) as u16 + header.message_length).into();
