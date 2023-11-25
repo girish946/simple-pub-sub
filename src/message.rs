@@ -1,9 +1,10 @@
 use log::error;
-const REGISTER: u8 = 0x01;
-const PUBLISH: u8 = 0x02;
-const SUBSCRIBE: u8 = 0x03;
-const UNSUBSCRIBE: u8 = 0x04;
-const QUERY: u8 = 0x05;
+use tokio::sync::broadcast::Sender;
+pub const REGISTER: u8 = 0x01;
+pub const PUBLISH: u8 = 0x02;
+pub const SUBSCRIBE: u8 = 0x03;
+pub const UNSUBSCRIBE: u8 = 0x04;
+pub const QUERY: u8 = 0x05;
 
 #[derive(Debug, Clone)]
 pub enum PktType {
@@ -24,9 +25,10 @@ impl ToString for PktType {
         }
     }
 }
+
 pub const SUPPORTED_VERSIONS: [[u8; 2]; 1] = [[0x00, 0x01]];
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum HeaderError {
     InvalidHeaderBufferLength,
     InvalidHeadOrTail,
@@ -44,6 +46,20 @@ pub struct Header {
     pub topic_length: u8,
     pub message_length: u16,
     pub padding: u8,
+}
+
+#[derive(Debug, Clone)]
+pub struct Msg {
+    pub header: Header,
+    pub topic: String,
+    pub message: Vec<u8>,
+    pub channel: Option<Sender<Msg>>,
+}
+
+impl Msg {
+    pub fn channel(&mut self, chan: Sender<Msg>) {
+        self.channel = Some(chan);
+    }
 }
 
 impl Header {
