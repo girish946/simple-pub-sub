@@ -1,10 +1,15 @@
-use log::error;
+use log::{error, info};
 use tokio::sync::broadcast::Sender;
 pub const REGISTER: u8 = 0x01;
 pub const PUBLISH: u8 = 0x02;
 pub const SUBSCRIBE: u8 = 0x03;
 pub const UNSUBSCRIBE: u8 = 0x04;
 pub const QUERY: u8 = 0x05;
+pub const REGISTERACK: u8 = 0x0A;
+pub const PUBLISHACK: u8 = 0x0B;
+pub const SUBSCRIBEACK: u8 = 0x0C;
+pub const UNSUBSCRIBEACK: u8 = 0x0D;
+pub const QUERYRESP: u8 = 0x0E;
 
 #[derive(Debug, Clone)]
 pub enum PktType {
@@ -13,6 +18,27 @@ pub enum PktType {
     SUBSCRIBE,
     UNSUBSCRIBE,
     QUERY,
+    REGISTERACK,
+    PUBLISHACK,
+    SUBSCRIBEACK,
+    UNSUBSCRIBEACK,
+    QUERYRESP,
+}
+impl PktType {
+    pub fn to_byte(&self) -> u8 {
+        match self {
+            PktType::REGISTER => REGISTER,
+            PktType::PUBLISH => PUBLISH,
+            PktType::SUBSCRIBE => SUBSCRIBE,
+            PktType::UNSUBSCRIBE => UNSUBSCRIBE,
+            PktType::QUERY => QUERY,
+            PktType::REGISTERACK => REGISTERACK,
+            PktType::PUBLISHACK => PUBLISHACK,
+            PktType::SUBSCRIBEACK => SUBSCRIBEACK,
+            PktType::UNSUBSCRIBEACK => UNSUBSCRIBEACK,
+            PktType::QUERYRESP => QUERYRESP,
+        }
+    }
 }
 impl ToString for PktType {
     fn to_string(&self) -> String {
@@ -22,6 +48,11 @@ impl ToString for PktType {
             PktType::SUBSCRIBE => "SUBSCRIBE".to_string(),
             PktType::UNSUBSCRIBE => "UNSUBSCRIBE".to_string(),
             PktType::QUERY => "QUERY".to_string(),
+            PktType::REGISTERACK => "REGISTER_ACK".to_string(),
+            PktType::PUBLISHACK => "PUBLISH_ACK".to_string(),
+            PktType::SUBSCRIBEACK => "SUBSCRIBE_ACK".to_string(),
+            PktType::UNSUBSCRIBEACK => "UNSUBSCRIBE_ACK".to_string(),
+            PktType::QUERYRESP => "QUERY_RESP".to_string(),
         }
     }
 }
@@ -36,6 +67,7 @@ pub enum HeaderError {
     InvalidMessageType,
     InvalidTopicLength,
     InvalidMessageLength,
+    InvalidResuestResponseType,
 }
 
 #[derive(Debug, Clone)]
@@ -60,9 +92,68 @@ impl Msg {
     pub fn channel(&mut self, chan: Sender<Msg>) {
         self.channel = Some(chan);
     }
+
+    pub fn response_msg(&self, message: Vec<u8>) -> Result<Msg, String> {
+        let header: Header = match self.header.response_header() {
+            Ok(h) => h,
+            Err(e) => {
+                error!("unable to generate the response header: {:?}", e);
+                return Err("unable to genreate response header".to_string());
+            }
+        };
+        return Ok(Msg {
+            header,
+            topic: self.topic.clone(),
+            message,
+            channel: None,
+        });
+    }
+
+    pub fn bytes(&self) -> Vec<u8> {
+        let mut buffer: Vec<u8> = self.header.bytes();
+        buffer.extend(self.topic.as_bytes().to_vec());
+        buffer.extend(self.message.clone());
+        info!("the generated buffer is: {:?}", buffer);
+        return buffer;
+    }
 }
 
 impl Header {
+    pub fn response_header(&self) -> Result<Header, HeaderError> {
+        let resp_type: PktType = match self.pkt_type {
+            PktType::SUBSCRIBE => PktType::SUBSCRIBEACK,
+            PktType::PUBLISH => PktType::PUBLISHACK,
+            PktType::UNSUBSCRIBE => PktType::UNSUBSCRIBEACK,
+            PktType::REGISTER => PktType::REGISTERACK,
+            PktType::QUERY => PktType::QUERYRESP,
+            _ => {
+                error!("invalid request/response type");
+                return Err(HeaderError::InvalidResuestResponseType);
+            }
+        };
+        return Ok(Header {
+            header: 0x0F,
+            version: self.version.clone(),
+            pkt_type: resp_type,
+            topic_length: self.topic_length,
+            message_length: self.message_length,
+            padding: 0x00,
+        });
+    }
+
+    pub fn bytes(&self) -> Vec<u8> {
+        let bytes_ = self.message_length.to_be_bytes();
+        return vec![
+            self.header,
+            self.version[0],
+            self.version[1],
+            self.pkt_type.to_byte(),
+            self.topic_length,
+            bytes_[0],
+            bytes_[1],
+            self.padding,
+        ];
+    }
     pub fn from_vec(bytes: Vec<u8>) -> Result<Header, HeaderError> {
         if !bytes.len() == 8 {
             error!("invalid header buffer length, aborting");
