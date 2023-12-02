@@ -1,4 +1,4 @@
-use log::{error, info};
+use log::error;
 use tokio::sync::broadcast::Sender;
 pub const REGISTER: u8 = 0x01;
 pub const PUBLISH: u8 = 0x02;
@@ -93,7 +93,7 @@ impl Msg {
         self.channel = Some(chan);
     }
 
-    pub fn response_msg(&self, message: Vec<u8>) -> Result<Msg, String> {
+    pub fn response_msg(&self, _message: Vec<u8>) -> Result<Msg, String> {
         let header: Header = match self.header.response_header() {
             Ok(h) => h,
             Err(e) => {
@@ -104,7 +104,7 @@ impl Msg {
         return Ok(Msg {
             header,
             topic: self.topic.clone(),
-            message,
+            message: "".as_bytes().to_vec(),
             channel: None,
         });
     }

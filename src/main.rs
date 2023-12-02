@@ -7,7 +7,8 @@ use std::error::Error;
 use tokio::net::TcpListener;
 
 pub const LOG_LEVEL: &str = "trace";
-
+pub const DEFAULT_HOST: &str = "0.0.0.0";
+pub const DEFAULT_PORT: u16 = 6480;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     env::set_var("RUST_LOG", LOG_LEVEL);
@@ -15,7 +16,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let addr = env::args()
         .nth(1)
-        .unwrap_or_else(|| "127.0.0.1:6480".to_string());
+        .unwrap_or_else(|| format!("{}:{}", DEFAULT_HOST, DEFAULT_PORT));
 
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on: {}", addr);

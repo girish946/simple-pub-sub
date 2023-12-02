@@ -62,12 +62,10 @@ pub async fn read_message(socket: &mut TcpStream) -> Result<message::Msg, String
                 return Err("client_disconnected: ".to_string());
             }
         };
-        // debug!("reading : {n}");
+
         if n == 0 {
             return Err("".to_string());
         }
-
-        // debug!("bytes data: {:?}", buf.clone());
 
         pkt_buf.extend(buf);
     }
@@ -118,9 +116,18 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                                                 0
                                             }
                                         };
-
                                     }
-                                    _=> {}
+                                    message::PktType::UNSUBSCRIBE=> {
+                                        m.channel(client_chan.clone());
+                                        match chan.send(m.clone()) {
+                                            Ok(n) => n,
+                                            Err(e) => {
+                                                error!("error while checking the topic in the map: {}", e.to_string());
+                                                0
+                                            },
+                                        };
+                                    },
+                                    _=>{}
                                 };
                            }
                            match message::get_msg_response(m.clone()){

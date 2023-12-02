@@ -92,6 +92,8 @@ class pubsub_client:
                     type_ = 0x03
                 if type_ == 0x03:
                     data = ""
+                if type_ == "usub":
+                    type_ = TYPE_UNSUBSCRIBE
                 data = self.get_packet(data, topic, type_=type_)
                 self.sock.send(data)
 
