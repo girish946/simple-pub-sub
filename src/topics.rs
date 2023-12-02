@@ -5,17 +5,6 @@ use std::vec;
 use tokio;
 use tokio::sync::broadcast::Sender;
 
-pub fn get_msg_response(msg: message::Msg) -> Result<Vec<u8>, String> {
-    let resp: Msg = match msg.response_msg(msg.message.clone()) {
-        Ok(m) => m,
-        Err(e) => {
-            error!("error occured while generating the response message: {}", e);
-            return Err(e);
-        }
-    };
-    Ok(resp.bytes())
-}
-
 #[derive(Debug, Clone)]
 pub struct TopicMap {
     pub map: HashMap<String, Vec<Sender<Msg>>>,
@@ -42,8 +31,7 @@ impl TopicMap {
         if !self.map.contains_key(&msg.topic) {
             return;
         }
-        let resp: Vec<u8> = get_msg_response(msg.clone()).unwrap();
-        info!("the resp is: {:?}", resp);
+
         match self.map.get_mut(&msg.topic) {
             Some(channels) => {
                 for ch in channels {
@@ -82,7 +70,6 @@ pub async fn topic_manager(chan: Sender<Msg>) {
             Ok(msg) => {
                 if !msg.topic.is_empty() {
                     info!("topic received: {}", msg.topic);
-                    // info!("message: {:?}", msg.message);
                     match msg.header.pkt_type {
                         message::PktType::PUBLISH => {
                             info!("publishing to map:{:?}", map);

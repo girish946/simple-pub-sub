@@ -107,8 +107,6 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                                                 0
                                             }
                                         };
-
-
                                     },
                                     message::PktType::SUBSCRIBE=>{
                                         info!("it's a subscribe pkt attaching the channel");
@@ -125,6 +123,15 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                                     _=> {}
                                 };
                            }
+                           match message::get_msg_response(m.clone()){
+                               Ok(v)=>{
+                               socket.write_all(&v).await.expect("could not convert message to bytes");
+                               },
+                               Err(e)=>{
+                                   error!("error while writing the data to the socket: {}", e.to_string());
+                               }
+                           }
+
                         },
                         Err(e)=>{
                             error!("error while receiving the message: {}", e);
@@ -137,10 +144,9 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                         Ok(m) => {
                             info!("message received: {:?}, {}", m.topic.clone(), m.message.len());
                             socket
-                                    .write_all(&m.message)
+                                    .write_all(&m.bytes())
                                     .await
                                     .expect("failed to write data to socket");
-
                         },
                         Err(_e) => {},
                     }

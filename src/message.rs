@@ -113,7 +113,7 @@ impl Msg {
         let mut buffer: Vec<u8> = self.header.bytes();
         buffer.extend(self.topic.as_bytes().to_vec());
         buffer.extend(self.message.clone());
-        info!("the generated buffer is: {:?}", buffer);
+        // info!("the generated buffer is: {:?}", buffer);
         return buffer;
     }
 }
@@ -216,4 +216,16 @@ impl Header {
             padding: 0x00,
         });
     }
+}
+
+pub fn get_msg_response(msg: Msg) -> Result<Vec<u8>, String> {
+    let mut resp: Vec<u8> = match msg.response_msg(msg.message.clone()) {
+        Ok(m) => m.header.bytes(),
+        Err(e) => {
+            error!("error occured while generating the response message: {}", e);
+            return Err(e);
+        }
+    };
+    resp.extend(msg.topic.bytes());
+    Ok(resp)
 }
