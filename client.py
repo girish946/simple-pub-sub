@@ -1,3 +1,4 @@
+import argparse
 import socket
 import threading
 
@@ -16,12 +17,12 @@ class pubsub_client:
     def __init__(self, host: str, port: int) -> None:
         self.host = host
         self.port = port
-        self.sock = None
         self.recv_thread = None
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def parse_header(self, buf: bytes, s: socket.socket):
         topic = ""
-        msg: bytes|str = ""
+        msg: bytes | str = ""
         if buf[0] == 0x0F and buf[7] == 0x00:
             if buf[1] == 0x00 and buf[2] == 0x01:
                 pkt_type = int(buf[3])
@@ -41,7 +42,6 @@ class pubsub_client:
                 if x:
                     topic, msg = self.parse_header(x, s)
                     print(f"\ntpic: {topic}, msg: {msg}")
-                    print(": ")
                 else:
                     break
         except Exception as e:
@@ -68,11 +68,14 @@ class pubsub_client:
         return s
 
     def connect(self):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((HOST, PORT))
+
+    def start_receving_thread(self):
         self.recv_thread = threading.Thread(target=self.recv, args=(self.sock,))
         self.recv_thread.start()
 
+    def start_console(self):
+        self.start_receving_thread()
         while True:
             type_ = 0x02
             topic = "test"
@@ -97,8 +100,37 @@ class pubsub_client:
                 data = self.get_packet(data, topic, type_=type_)
                 self.sock.send(data)
 
+    def publish(self, pkt: bytes):
+        self.sock.send(pkt)
+        response = self.sock.recv(8)
+        if response:
+            topic, _ = self.parse_header(response, self.sock)
+            print(f"\ntpic: {topic}")
+
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="client for `simple-pub-sub` implemented in python."
+    )
+    parser.add_argument("--publish", "-p", type=str, help="publish to the given topic")
+    parser.add_argument(
+        "--subscribe", "-s", type=str, help="subscribe to the given topic"
+    )
+    parser.add_argument("--message", "-m", type=str, help="message to be published")
+    parser.add_argument(
+        "--consloe" "-c", type=bool, help="start the console for the client"
+    )
+    args = parser.parse_args()
+    # print(args)
     cli = pubsub_client(HOST, PORT)
     print(cli.port, cli.host)
     cli.connect()
+    if args.publish:
+        if args.message:
+            print(f"publishing to {args.publish} the message is: {args.message}")
+            pkt = cli.get_packet(args.message, args.publish, TYPE_PUBLISH)
+            cli.publish(pkt)
+    if args.subscribe:
+        pkt = cli.get_packet("", args.subscribe, TYPE_SUBSCRIBE)
+        cli.publish(pkt)
+        cli.start_receving_thread()
