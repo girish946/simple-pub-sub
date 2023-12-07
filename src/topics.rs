@@ -1,35 +1,38 @@
 use crate::message::{self, Msg};
 use log::{error, info};
 use std::collections::HashMap;
-use std::vec;
 use tokio;
 use tokio::sync::broadcast::Sender;
 
+type ClientChannelMap = HashMap<String, Sender<Msg>>;
+
 #[derive(Debug, Clone)]
 pub struct TopicMap {
-    pub map: HashMap<String, Vec<Sender<Msg>>>,
+    pub map: HashMap<String, ClientChannelMap>,
 }
 impl TopicMap {
-    pub fn add_channel(&mut self, topic: String, channel: Sender<Msg>) {
-        if self.map.contains_key(&topic) {
-            match self.map.get_mut(&topic) {
-                Some(channels) => channels.push(channel),
-                None => {}
-            }
-        } else {
-            self.map.insert(topic, vec![channel]);
-        }
-    }
-    pub fn remove_channel(&mut self, topic: String, channel: Sender<Msg>) {
+    pub fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
         if self.map.contains_key(&topic) {
             match self.map.get_mut(&topic) {
                 Some(channels) => {
-                    for (pos, e) in channels.to_owned().iter().enumerate() {
-                        if e.same_channel(&channel) {
-                            channels.remove(pos);
-                            break;
-                        }
+                    if !channels.contains_key(&client_id) {
+                        channels.insert(client_id, channel);
                     }
+                    // Not sure if the channel should be replaced if the key is already present.
+                }
+                None => {}
+            }
+        } else {
+            let mut client_map = ClientChannelMap::new();
+            client_map.insert(client_id, channel);
+            self.map.insert(topic, client_map);
+        }
+    }
+    pub fn remove_channel(&mut self, topic: String, client_id: String) {
+        if self.map.contains_key(&topic) {
+            match self.map.get_mut(&topic) {
+                Some(channels) => {
+                    channels.remove(&client_id);
                 }
                 None => {}
             };
@@ -38,7 +41,7 @@ impl TopicMap {
     }
     pub fn add_topic(&mut self, topic: String) {
         if !self.map.contains_key(&topic) {
-            let v: Vec<Sender<Msg>> = Vec::new();
+            let v = ClientChannelMap::new();
             self.map.insert(topic, v);
         }
     }
@@ -47,31 +50,38 @@ impl TopicMap {
         if !self.map.contains_key(&msg.topic) {
             return;
         }
-        let mut dead_channels: Vec<Sender<Msg>> = Vec::new();
+        let topic = msg.topic.clone();
 
-        match self.map.get_mut(&msg.topic) {
+        match self.map.get_mut(&topic.clone()) {
             Some(channels) => {
-                for ch in channels {
-                    info!("publishing to :{:?}", ch);
-                    match ch.send(msg.clone()) {
-                        Ok(n) => n,
-                        Err(e) => {
-                            error!(
-                                "could not publish to topic: {}: {}",
-                                msg.topic,
-                                e.to_string()
-                            );
-                            dead_channels.push(ch.clone());
-                            0
+                let dead_channels = channels
+                    .iter()
+                    .map(|(client_id, channel)| {
+                        info!("sending msg to the {}", client_id);
+                        match channel.send(msg.clone()) {
+                            Ok(_n) => "".to_string(),
+                            Err(e) => {
+                                error!(
+                                    "error occured: {} while sending the message to the channel {}",
+                                    e.to_string(),
+                                    client_id
+                                );
+                                error!("cleaing up");
+                                client_id.clone()
+                            }
                         }
-                    };
-                }
+                    })
+                    .collect::<Vec<_>>();
+                info!("dead_channels: {:?}", dead_channels);
+                let _ = dead_channels
+                    .iter()
+                    .map(|client_id| {
+                        self.remove_channel(topic.clone(), client_id.clone());
+                    })
+                    .collect::<Vec<_>>();
             }
             None => {}
         };
-        for ch in dead_channels {
-            self.remove_channel(msg.topic.clone(), ch);
-        }
     }
 }
 
@@ -97,12 +107,16 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                             map.publish(msg).await;
                         }
                         message::PktType::SUBSCRIBE => {
-                            map.add_channel(msg.topic, msg.channel.unwrap());
+                            map.add_channel(
+                                msg.topic,
+                                msg.client_id.unwrap(),
+                                msg.channel.unwrap(),
+                            );
                             info!("map: {:?}", map);
                         }
                         message::PktType::UNSUBSCRIBE => {
                             info!("unsubscribing:");
-                            map.remove_channel(msg.topic, msg.channel.unwrap());
+                            map.remove_channel(msg.topic, msg.client_id.unwrap());
                         }
                         _ => {}
                     };

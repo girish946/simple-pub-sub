@@ -3,8 +3,11 @@ use log::{debug, error, info};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Sender;
-
-pub async fn read_message(socket: &mut TcpStream) -> Result<message::Msg, String> {
+use uuid;
+pub async fn read_message(
+    socket: &mut TcpStream,
+    client_id: String,
+) -> Result<message::Msg, String> {
     let mut pkt_buf: Vec<u8>;
     pkt_buf = vec![0; 512];
     info!("reading...");
@@ -74,6 +77,7 @@ pub async fn read_message(socket: &mut TcpStream) -> Result<message::Msg, String
         topic,
         message: pkt_buf[(8 + header.topic_length).into()..message_position].to_vec(),
         channel: None,
+        client_id: Some(client_id),
     });
 }
 
@@ -87,10 +91,12 @@ pub async fn read_channel_msg(
 pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
     let client_chan: tokio::sync::broadcast::Sender<message::Msg> =
         tokio::sync::broadcast::Sender::new(1);
+    let client_id = uuid::Uuid::new_v4().to_string();
+
     tokio::spawn(async move {
         loop {
             tokio::select! {
-                msg_ = read_message(&mut socket) =>{
+                msg_ = read_message(&mut socket, client_id.clone()) =>{
                     match msg_{
                         Ok(mut m)=>{
                             if !m.topic.is_empty() {

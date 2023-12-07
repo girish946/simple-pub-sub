@@ -86,6 +86,7 @@ pub struct Msg {
     pub topic: String,
     pub message: Vec<u8>,
     pub channel: Option<Sender<Msg>>,
+    pub client_id: Option<String>,
 }
 
 impl Msg {
@@ -106,6 +107,7 @@ impl Msg {
             topic: self.topic.clone(),
             message: "".as_bytes().to_vec(),
             channel: None,
+            client_id: None,
         });
     }
 
