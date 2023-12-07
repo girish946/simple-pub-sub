@@ -116,7 +116,7 @@ impl Msg {
         buffer.extend(self.topic.as_bytes().to_vec());
         buffer.extend(self.message.clone());
         // info!("the generated buffer is: {:?}", buffer);
-        return buffer;
+        buffer
     }
 }
 
@@ -133,19 +133,19 @@ impl Header {
                 return Err(HeaderError::InvalidResuestResponseType);
             }
         };
-        return Ok(Header {
+        Ok(Header {
             header: 0x0F,
-            version: self.version.clone(),
+            version: self.version,
             pkt_type: resp_type,
             topic_length: self.topic_length,
             message_length: self.message_length,
             padding: 0x00,
-        });
+        })
     }
 
     pub fn bytes(&self) -> Vec<u8> {
         let bytes_ = self.message_length.to_be_bytes();
-        return vec![
+        vec![
             self.header,
             self.version[0],
             self.version[1],
@@ -154,7 +154,7 @@ impl Header {
             bytes_[0],
             bytes_[1],
             self.padding,
-        ];
+        ]
     }
     pub fn from_vec(bytes: Vec<u8>) -> Result<Header, HeaderError> {
         if !bytes.len() == 8 {
@@ -209,14 +209,14 @@ impl Header {
                 _ => {}
             };
         }
-        return Ok(Header {
+        Ok(Header {
             header: 0x0F,
             version: [bytes[1], bytes[2]],
             pkt_type,
             topic_length: bytes[4],
             message_length,
             padding: 0x00,
-        });
+        })
     }
 }
 

@@ -15,9 +15,7 @@ impl TopicMap {
         if self.map.contains_key(&topic.clone()) {
             match self.map.get_mut(&topic.clone()) {
                 Some(channels) => {
-                    if !channels.contains_key(&client_id) {
-                        channels.insert(client_id, channel);
-                    }
+                    channels.entry(client_id).or_insert(channel);
                     // Not sure if the channel should be replaced if the key is already present.
                 }
                 None => {}
@@ -40,10 +38,10 @@ impl TopicMap {
         }
     }
     pub fn add_topic(&mut self, topic: String) {
-        if !self.map.contains_key(&topic) {
-            let v = ClientChannelMap::new();
-            self.map.insert(topic, v);
-        }
+        self.map.entry(topic).or_insert_with(|| {
+            
+            ClientChannelMap::new()
+        });
     }
 
     pub async fn publish(&mut self, msg: Msg) {

@@ -72,13 +72,13 @@ pub async fn read_message(
 
         pkt_buf.extend(buf);
     }
-    return Ok(message::Msg {
+    Ok(message::Msg {
         header: header.clone(),
         topic,
         message: pkt_buf[(8 + header.topic_length).into()..message_position].to_vec(),
         channel: None,
         client_id: Some(client_id),
-    });
+    })
 }
 
 pub async fn read_channel_msg(
