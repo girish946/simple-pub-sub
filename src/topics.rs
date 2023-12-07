@@ -12,8 +12,8 @@ pub struct TopicMap {
 }
 impl TopicMap {
     pub fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
-        if self.map.contains_key(&topic) {
-            match self.map.get_mut(&topic) {
+        if self.map.contains_key(&topic.clone()) {
+            match self.map.get_mut(&topic.clone()) {
                 Some(channels) => {
                     if !channels.contains_key(&client_id) {
                         channels.insert(client_id, channel);
