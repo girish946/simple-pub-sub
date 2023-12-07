@@ -1,4 +1,4 @@
-# Simple-message-broker
+# Simple-pub-sub
 
 A simple message broker implemented in rust.
 

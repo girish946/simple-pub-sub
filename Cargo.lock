@@ -385,7 +385,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple-message-broker"
+name = "simple-pub-sub"
 version = "0.1.0"
 dependencies = [
  "env_logger",
