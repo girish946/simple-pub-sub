@@ -1,6 +1,8 @@
 import argparse
 import socket
 import threading
+from typing import Callable
+from typing import Tuple
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 6480  # The port used by the server
@@ -17,12 +19,13 @@ class pubsub_client:
     def __init__(self, host: str, port: int) -> None:
         self.host = host
         self.port = port
-        self.recv_thread = None
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.recv_thread = threading.Thread(target=self.recv, args=(self.sock,))
+        self.should_stop = False
 
-    def parse_header(self, buf: bytes, s: socket.socket):
+    def parse_header(self, buf: bytes, s: socket.socket) -> Tuple[str, bytes]:
         topic = ""
-        msg: bytes | str = ""
+        msg: bytes = bytes()
         if buf[0] == 0x0F and buf[7] == 0x00:
             if buf[1] == 0x00 and buf[2] == 0x01:
                 pkt_type = int(buf[3])
@@ -35,19 +38,19 @@ class pubsub_client:
                     return topic, msg
         return (topic, msg)
 
-    def recv(self, s: socket.socket):
+    def recv(self, s: socket.socket, callback: Callable[[str, bytes], None]):
         try:
             while True:
                 x = s.recv(8)
                 if x:
                     topic, msg = self.parse_header(x, s)
-                    print(f"\ntpic: {topic}, msg: {msg}")
+                    callback(topic, msg)
                 else:
+                    break
+                if self.should_stop:
                     break
         except Exception as e:
             print("exception occured ", e)
-        except KeyboardInterrupt:
-            print("exitting")
 
     def get_packet(self, data: str | None, topic: None | str, type_: int = 0x02):
         length: bytes = bytes([0, 0])
@@ -70,42 +73,61 @@ class pubsub_client:
     def connect(self):
         self.sock.connect((HOST, PORT))
 
-    def start_receving_thread(self):
-        self.recv_thread = threading.Thread(target=self.recv, args=(self.sock,))
+    def start_receving_thread(self, callback: Callable[[str, bytes], None]):
+        self.recv_thread = threading.Thread(
+            target=self.recv, args=(self.sock, callback)
+        )
         self.recv_thread.start()
 
     def start_console(self):
-        self.start_receving_thread()
-        while True:
-            type_ = 0x02
-            topic = "test"
-            data = input(": ")
-            if data:
-                topic_and_msg = data.split(":", 2)
-                if len(topic_and_msg) >= 2:
-                    topic = topic_and_msg[1]
-                    data = topic_and_msg[2]
-                    type_ = topic_and_msg[0]
-                else:
-                    topic = "test"
-                    data = topic_and_msg[0]
-                if type_ == "pub":
-                    type_ = 0x02
-                elif type_ == "sub":
-                    type_ = 0x03
-                if type_ == 0x03:
-                    data = ""
-                if type_ == "usub":
-                    type_ = TYPE_UNSUBSCRIBE
-                data = self.get_packet(data, topic, type_=type_)
-                self.sock.send(data)
+        def recv_callback(topic, msg):
+            print(f"topic: {topic} msg: {msg}")
 
-    def publish(self, pkt: bytes):
+        self.start_receving_thread(recv_callback)
+        while True:
+            try:
+                type_ = 0x02
+                topic = "test"
+                data = input(": ")
+                if data:
+                    topic_and_msg = data.split(":", 2)
+                    if len(topic_and_msg) >= 2:
+                        topic = topic_and_msg[1]
+                        data = topic_and_msg[2]
+                        type_ = topic_and_msg[0]
+                    else:
+                        topic = "test"
+                        data = topic_and_msg[0]
+                    if type_ == "pub":
+                        type_ = 0x02
+                    elif type_ == "sub":
+                        type_ = 0x03
+                    if type_ == 0x03:
+                        data = ""
+                    if type_ == "usub":
+                        type_ = TYPE_UNSUBSCRIBE
+                    data = self.get_packet(data, topic, type_=type_)
+                    self.sock.send(data)
+            except KeyboardInterrupt:
+                print("exitting")
+                break
+
+    def publish(self, topic: str, message: str):
+        pkt = self.get_packet(message, topic, TYPE_PUBLISH)
         self.sock.send(pkt)
         response = self.sock.recv(8)
         if response:
             topic, _ = self.parse_header(response, self.sock)
             print(f"\ntpic: {topic}")
+
+    def subscribe(self, topic: str):
+        def recv_callback(topic, msg):
+            print(f"topic: {topic} msg: {msg}")
+
+        self.start_receving_thread(recv_callback)
+        pkt = self.get_packet("", topic, TYPE_SUBSCRIBE)
+        self.sock.send(pkt)
+        self.recv_thread.join()
 
 
 if __name__ == "__main__":
@@ -118,7 +140,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--message", "-m", type=str, help="message to be published")
     parser.add_argument(
-        "--consloe" "-c", type=bool, help="start the console for the client"
+        "--consloe", "-c", type=bool, help="start the console for the client"
     )
     args = parser.parse_args()
     # print(args)
@@ -128,9 +150,9 @@ if __name__ == "__main__":
     if args.publish:
         if args.message:
             print(f"publishing to {args.publish} the message is: {args.message}")
-            pkt = cli.get_packet(args.message, args.publish, TYPE_PUBLISH)
-            cli.publish(pkt)
+            cli.publish(args.publish, args.message)
     if args.subscribe:
-        pkt = cli.get_packet("", args.subscribe, TYPE_SUBSCRIBE)
-        cli.publish(pkt)
-        cli.start_receving_thread()
+        print("subscribing to: ", args.subscribe)
+        cli.subscribe(args.subscribe)
+    if args.consloe:
+        cli.start_console()
