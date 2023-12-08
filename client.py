@@ -15,6 +15,11 @@ TYPE_UNSUBSCRIBE = 0x04
 TYPE_QUERY = 0x05
 
 
+class Pkt:
+    def __init__(self):
+        pass
+
+
 class pubsub_client:
     def __init__(self, host: str, port: int) -> None:
         self.host = host
@@ -38,7 +43,7 @@ class pubsub_client:
                     return topic, msg
         return (topic, msg)
 
-    def recv(self, s: socket.socket, callback: Callable[[str, bytes], None]):
+    def recv(self, s: socket.socket, callback: Callable[[str, bytes], None]) -> None:
         try:
             while True:
                 x = s.recv(8)
@@ -52,7 +57,9 @@ class pubsub_client:
         except Exception as e:
             print("exception occured ", e)
 
-    def get_packet(self, data: str | None, topic: None | str, type_: int = 0x02):
+    def get_packet(
+        self, data: str | None, topic: None | str, type_: int = 0x02
+    ) -> bytes:
         length: bytes = bytes([0, 0])
         topic_len = 0.1
         topic_data = []
@@ -70,16 +77,16 @@ class pubsub_client:
         )
         return s
 
-    def connect(self):
+    def connect(self) -> None:
         self.sock.connect((HOST, PORT))
 
-    def start_receving_thread(self, callback: Callable[[str, bytes], None]):
+    def start_receving_thread(self, callback: Callable[[str, bytes], None]) -> None:
         self.recv_thread = threading.Thread(
             target=self.recv, args=(self.sock, callback)
         )
         self.recv_thread.start()
 
-    def start_console(self):
+    def start_console(self) -> None:
         def recv_callback(topic, msg):
             print(f"topic: {topic} msg: {msg}")
 
@@ -112,15 +119,15 @@ class pubsub_client:
                 print("exitting")
                 break
 
-    def publish(self, topic: str, message: str):
+    def publish(self, topic: str, message: str) -> None:
         pkt = self.get_packet(message, topic, TYPE_PUBLISH)
         self.sock.send(pkt)
         response = self.sock.recv(8)
         if response:
             topic, _ = self.parse_header(response, self.sock)
-            print(f"\ntpic: {topic}")
+            print(f"tpic: {topic}")
 
-    def subscribe(self, topic: str):
+    def subscribe(self, topic: str) -> None:
         def recv_callback(topic, msg):
             print(f"topic: {topic} msg: {msg}")
 
@@ -143,7 +150,7 @@ if __name__ == "__main__":
         "--consloe", "-c", type=bool, help="start the console for the client"
     )
     args = parser.parse_args()
-    # print(args)
+
     cli = pubsub_client(HOST, PORT)
     print(cli.port, cli.host)
     cli.connect()
