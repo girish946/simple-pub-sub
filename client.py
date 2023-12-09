@@ -7,25 +7,13 @@ from typing import Tuple
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 6480  # The port used by the server
 
-"""
-REGISTER: u8 = 0x01;
-PUBLISH: u8 = 0x02;
-SUBSCRIBE: u8 = 0x03;
-UNSUBSCRIBE: u8 = 0x04;
-QUERY: u8 = 0x05;
-REGISTERACK: u8 = 0x0A;
-PUBLISHACK: u8 = 0x0B;
-SUBSCRIBEACK: u8 = 0x0C;
-UNSUBSCRIBEACK: u8 = 0x0D;
-QUERYRESP: u8 = 0x0E;
-"""
-
 HEADER_BYTE = 0x0F
 TYPE_REGISTER = 0x01
 TYPE_PUBLISH = 0x02
 TYPE_SUBSCRIBE = 0x03
 TYPE_UNSUBSCRIBE = 0x04
 TYPE_QUERY = 0x05
+TYPE_QUERYRESP = 0x0E
 
 PUBSUB_VERSION = [0x00, 0x01]
 
@@ -111,6 +99,7 @@ class Header:
         s = f"Header: {HEADER_BYTE}, VERSION: {PUBSUB_VERSION[0]}.{PUBSUB_VERSION[1]}, "
         s += f"Pkt Type: {self.type_dict[self.pkt_type]}, Topic Length: {self.topic_length}, "
         s += f"Message Length: {msg_len}"
+        return s
 
 
 class Pkt:
@@ -144,15 +133,16 @@ class pubsub_client:
         self.should_stop = False
 
     def recv_pkt(self, buf: bytes, s: socket.socket) -> Pkt:
+        # print(buf)
         topic = ""
         msg: bytes = bytes()
         header = Header(bytes=buf)
+        # print(header)
         topic = s.recv(header.topic_length)
-        if header.pkt_type == TYPE_PUBLISH:
+        if header.pkt_type == TYPE_PUBLISH or header.pkt_type == TYPE_QUERYRESP:
             msg = s.recv(header.length())
         pkt = Pkt(pkt_type=header.pkt_type, topic=bytes(topic), message=msg)
         return pkt
-
 
     def recv(self, s: socket.socket, callback: Callable[[str, bytes], None]) -> None:
         try:
@@ -167,7 +157,6 @@ class pubsub_client:
                     break
         except Exception as e:
             print("exception occured ", e)
-
 
     def connect(self) -> None:
         self.sock.connect((HOST, PORT))
@@ -205,6 +194,8 @@ class pubsub_client:
                         data = ""
                     if type_ == "usub":
                         type_ = TYPE_UNSUBSCRIBE
+                    if type_ == "query":
+                        type_ = TYPE_QUERY
                     data = Pkt(
                         pkt_type=type_,
                         topic=bytearray(topic.encode()),

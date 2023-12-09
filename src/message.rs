@@ -11,7 +11,7 @@ pub const SUBSCRIBEACK: u8 = 0x0C;
 pub const UNSUBSCRIBEACK: u8 = 0x0D;
 pub const QUERYRESP: u8 = 0x0E;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum PktType {
     PUBLISH,
     SUBSCRIBE,
@@ -89,17 +89,18 @@ impl Msg {
     }
 
     pub fn response_msg(&self, _message: Vec<u8>) -> Result<Msg, String> {
-        let header: Header = match self.header.response_header() {
+        let mut header: Header = match self.header.response_header() {
             Ok(h) => h,
             Err(e) => {
                 error!("unable to generate the response header: {:?}", e);
                 return Err("unable to genreate response header".to_string());
             }
         };
+        header.message_length = _message.len() as u16;
         return Ok(Msg {
             header,
             topic: self.topic.clone(),
-            message: "".as_bytes().to_vec(),
+            message: _message,
             channel: None,
             client_id: None,
         });

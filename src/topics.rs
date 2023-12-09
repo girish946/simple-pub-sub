@@ -1,5 +1,6 @@
 use crate::message::{self, Msg};
 use log::{error, info, trace};
+use serde_json::json;
 use std::collections::HashMap;
 use tokio;
 use tokio::sync::broadcast::Sender;
@@ -11,6 +12,24 @@ pub struct TopicMap {
     pub map: HashMap<String, ClientChannelMap>,
 }
 impl TopicMap {
+    pub fn query(&self, topic: String) -> String {
+        let v: Vec<String>;
+        if topic == "*" {
+            v = self
+                .map
+                .iter()
+                .map(|(k, v)| format!("{}: {}", k, v.len()))
+                .collect();
+            return json!({topic: v}).to_string();
+        } else {
+            if self.map.contains_key(&topic) {
+                v = vec![format!("{}", self.map.get(&topic).unwrap().len())];
+                return json!({topic: v}).to_string();
+            } else {
+                return "".to_string();
+            }
+        }
+    }
     pub fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
         if self.map.contains_key(&topic.clone()) {
             match self.map.get_mut(&topic.clone()) {
@@ -109,11 +128,37 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                                 msg.client_id.unwrap(),
                                 msg.channel.unwrap(),
                             );
-                            info!("map: {:?}", map);
+                            trace!("map: {:?}", map);
                         }
                         message::PktType::UNSUBSCRIBE => {
                             info!("unsubscribing:");
                             map.remove_channel(msg.topic, msg.client_id.unwrap());
+                        }
+                        message::PktType::QUERY => {
+                            info!("querying");
+                            let query_resp = map.query(msg.topic.clone());
+                            info!("query_resp: {}", query_resp.clone());
+                            let resp_msg = match msg.response_msg(query_resp.into_bytes()) {
+                                Ok(rm) => rm,
+                                Err(e) => {
+                                    error!(
+                                        "error while getting the response to the query message: {}",
+                                        e.to_string()
+                                    );
+                                    continue;
+                                }
+                            };
+                            info!("generated query resp: {:?}", resp_msg);
+                            match msg.channel.unwrap().send(resp_msg) {
+                                Ok(n) => n,
+                                Err(e) => {
+                                    error!(
+                                        "error while sending the query response: {}",
+                                        e.to_string()
+                                    );
+                                    0
+                                }
+                            };
                         }
                         _ => {}
                     };

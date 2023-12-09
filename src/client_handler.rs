@@ -1,5 +1,5 @@
 use crate::message;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Sender;
@@ -49,11 +49,11 @@ pub async fn read_message(
 
     if 504 - u16::from(header.topic_length) < header.message_length {
         let bytes_remaining = header.message_length - (504 - u16::from(header.topic_length));
-        // debug!("the message is bigger, reading the remainig chunk");
-        // debug!("{} bytes remaining", bytes_remaining);
+        trace!("the message is bigger, reading the remainig chunk");
+        trace!("{} bytes remaining", bytes_remaining);
 
         let mut buf: Vec<u8> = Vec::with_capacity(bytes_remaining.into());
-        // debug!("reading next bytes");
+        trace!("reading next bytes");
 
         let n = match socket.read_buf(&mut buf).await {
             Ok(n) => n,
@@ -133,10 +133,21 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                                             },
                                         };
                                     },
+                                    message::PktType::QUERY=>{
+                                        m.channel(client_chan.clone());
+                                        match chan.send(m.clone()) {
+                                            Ok(n) => n,
+                                            Err(e) => {
+                                                error!("error while checking the topic in the map: {}", e.to_string());
+                                                0
+                                            },
+                                        };
+                                    },
                                     _=>{}
                                 };
                            }
-                           match message::get_msg_response(m.clone()){
+                            if  m.header.pkt_type != message::PktType::QUERY{
+                                match message::get_msg_response(m.clone()){
                                Ok(v)=>{
                                socket.write_all(&v).await.expect("could not convert message to bytes");
                                },
@@ -144,6 +155,8 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                                    error!("error while writing the data to the socket: {}", e.to_string());
                                }
                            }
+
+                            }
 
                         },
                         Err(_e)=>{
