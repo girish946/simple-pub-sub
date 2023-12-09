@@ -38,10 +38,9 @@ impl TopicMap {
         }
     }
     pub fn add_topic(&mut self, topic: String) {
-        self.map.entry(topic).or_insert_with(|| {
-            
-            ClientChannelMap::new()
-        });
+        self.map
+            .entry(topic)
+            .or_insert_with(|| ClientChannelMap::new());
     }
 
     pub async fn publish(&mut self, msg: Msg) {
