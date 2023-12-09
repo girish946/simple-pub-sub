@@ -1,5 +1,5 @@
 use crate::message::{self, Msg};
-use log::{error, info};
+use log::{error, info, trace};
 use std::collections::HashMap;
 use tokio;
 use tokio::sync::broadcast::Sender;
@@ -34,7 +34,7 @@ impl TopicMap {
                 }
                 None => {}
             };
-            info!("channels: {:?}", self.map);
+            trace!("channels: {:?}", self.map);
         }
     }
     pub fn add_topic(&mut self, topic: String) {
@@ -100,7 +100,7 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                     info!("topic received: {}", msg.topic);
                     match msg.header.pkt_type {
                         message::PktType::PUBLISH => {
-                            info!("publishing to map:{:?}", map);
+                            trace!("publishing to map:{:?}", map);
                             map.publish(msg).await;
                         }
                         message::PktType::SUBSCRIBE => {

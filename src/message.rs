@@ -1,4 +1,4 @@
-use log::error;
+use log::{error, trace};
 use tokio::sync::broadcast::Sender;
 pub const REGISTER: u8 = 0x01;
 pub const PUBLISH: u8 = 0x02;
@@ -13,12 +13,10 @@ pub const QUERYRESP: u8 = 0x0E;
 
 #[derive(Debug, Clone)]
 pub enum PktType {
-    REGISTER,
     PUBLISH,
     SUBSCRIBE,
     UNSUBSCRIBE,
     QUERY,
-    REGISTERACK,
     PUBLISHACK,
     SUBSCRIBEACK,
     UNSUBSCRIBEACK,
@@ -27,12 +25,10 @@ pub enum PktType {
 impl PktType {
     pub fn to_byte(&self) -> u8 {
         match self {
-            PktType::REGISTER => REGISTER,
             PktType::PUBLISH => PUBLISH,
             PktType::SUBSCRIBE => SUBSCRIBE,
             PktType::UNSUBSCRIBE => UNSUBSCRIBE,
             PktType::QUERY => QUERY,
-            PktType::REGISTERACK => REGISTERACK,
             PktType::PUBLISHACK => PUBLISHACK,
             PktType::SUBSCRIBEACK => SUBSCRIBEACK,
             PktType::UNSUBSCRIBEACK => UNSUBSCRIBEACK,
@@ -43,12 +39,10 @@ impl PktType {
 impl ToString for PktType {
     fn to_string(&self) -> String {
         match self {
-            PktType::REGISTER => "REGISTER".to_string(),
             PktType::PUBLISH => "PUBLISH".to_string(),
             PktType::SUBSCRIBE => "SUBSCRIBE".to_string(),
             PktType::UNSUBSCRIBE => "UNSUBSCRIBE".to_string(),
             PktType::QUERY => "QUERY".to_string(),
-            PktType::REGISTERACK => "REGISTER_ACK".to_string(),
             PktType::PUBLISHACK => "PUBLISH_ACK".to_string(),
             PktType::SUBSCRIBEACK => "SUBSCRIBE_ACK".to_string(),
             PktType::UNSUBSCRIBEACK => "UNSUBSCRIBE_ACK".to_string(),
@@ -115,7 +109,7 @@ impl Msg {
         let mut buffer: Vec<u8> = self.header.bytes();
         buffer.extend(self.topic.as_bytes().to_vec());
         buffer.extend(self.message.clone());
-        // info!("the generated buffer is: {:?}", buffer);
+        trace!("the generated buffer is: {:?}", buffer);
         buffer
     }
 }
@@ -126,7 +120,6 @@ impl Header {
             PktType::SUBSCRIBE => PktType::SUBSCRIBEACK,
             PktType::PUBLISH => PktType::PUBLISHACK,
             PktType::UNSUBSCRIBE => PktType::UNSUBSCRIBEACK,
-            PktType::REGISTER => PktType::REGISTERACK,
             PktType::QUERY => PktType::QUERYRESP,
             _ => {
                 error!("invalid request/response type");
@@ -173,7 +166,6 @@ impl Header {
         }
 
         let pkt_type: PktType = match bytes[3] {
-            REGISTER => PktType::REGISTER,
             PUBLISH => PktType::PUBLISH,
             SUBSCRIBE => PktType::SUBSCRIBE,
             UNSUBSCRIBE => PktType::UNSUBSCRIBE,
@@ -186,7 +178,15 @@ impl Header {
 
         if bytes[4] == 0 {
             match pkt_type {
-                PktType::REGISTER => {
+                PktType::PUBLISH => {
+                    error!("invalid topic length, aborting");
+                    return Err(HeaderError::InvalidTopicLength);
+                }
+                PktType::SUBSCRIBE => {
+                    error!("invalid topic length, aborting");
+                    return Err(HeaderError::InvalidTopicLength);
+                }
+                PktType::UNSUBSCRIBE => {
                     error!("invalid topic length, aborting");
                     return Err(HeaderError::InvalidTopicLength);
                 }

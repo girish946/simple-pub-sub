@@ -1,5 +1,5 @@
 use crate::message;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Sender;
@@ -146,8 +146,8 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                            }
 
                         },
-                        Err(e)=>{
-                            error!("error while receiving the message: {}", e);
+                        Err(_e)=>{
+                            warn!("client disconnected: {}", client_id);
                             return;
                         }
                     };
