@@ -96,13 +96,13 @@ impl Msg {
             }
         };
         header.message_length = _message.len() as u16;
-        return Ok(Msg {
+        Ok(Msg {
             header,
             topic: self.topic.clone(),
             message: _message,
             channel: None,
             client_id: None,
-        });
+        })
     }
 
     pub fn bytes(&self) -> Vec<u8> {

@@ -20,14 +20,12 @@ impl TopicMap {
                 .iter()
                 .map(|(k, v)| format!("{}: {}", k, v.len()))
                 .collect();
-            return json!({topic: v}).to_string();
+            json!({topic: v}).to_string()
+        } else if self.map.contains_key(&topic) {
+            v = vec![format!("{}", self.map.get(&topic).unwrap().len())];
+            json!({topic: v}).to_string()
         } else {
-            if self.map.contains_key(&topic) {
-                v = vec![format!("{}", self.map.get(&topic).unwrap().len())];
-                return json!({topic: v}).to_string();
-            } else {
-                return "".to_string();
-            }
+            "".to_string()
         }
     }
     pub fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
@@ -59,7 +57,7 @@ impl TopicMap {
     pub fn add_topic(&mut self, topic: String) {
         self.map
             .entry(topic)
-            .or_insert_with(|| ClientChannelMap::new());
+            .or_insert_with(ClientChannelMap::new);
     }
 
     pub async fn publish(&mut self, msg: Msg) {
