@@ -30,12 +30,9 @@ impl TopicMap {
     }
     pub fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
         if self.map.contains_key(&topic.clone()) {
-            match self.map.get_mut(&topic.clone()) {
-                Some(channels) => {
-                    channels.entry(client_id).or_insert(channel);
-                    // Not sure if the channel should be replaced if the key is already present.
-                }
-                None => {}
+            if let Some(channels) = self.map.get_mut(&topic.clone()) {
+                channels.entry(client_id).or_insert(channel);
+                // Not sure if the channel should be replaced if the key is already present.
             }
         } else {
             let mut client_map = ClientChannelMap::new();
@@ -45,19 +42,14 @@ impl TopicMap {
     }
     pub fn remove_channel(&mut self, topic: String, client_id: String) {
         if self.map.contains_key(&topic) {
-            match self.map.get_mut(&topic) {
-                Some(channels) => {
-                    channels.remove(&client_id);
-                }
-                None => {}
-            };
+            if let Some(channels) = self.map.get_mut(&topic) {
+                channels.remove(&client_id);
+            }
             trace!("channels: {:?}", self.map);
         }
     }
     pub fn add_topic(&mut self, topic: String) {
-        self.map
-            .entry(topic)
-            .or_insert_with(ClientChannelMap::new);
+        self.map.entry(topic).or_insert_with(ClientChannelMap::new);
     }
 
     pub async fn publish(&mut self, msg: Msg) {
@@ -66,36 +58,33 @@ impl TopicMap {
         }
         let topic = msg.topic.clone();
 
-        match self.map.get_mut(&topic.clone()) {
-            Some(channels) => {
-                let dead_channels = channels
-                    .iter()
-                    .map(|(client_id, channel)| {
-                        info!("sending msg to the {}", client_id);
-                        match channel.send(msg.clone()) {
-                            Ok(_n) => "".to_string(),
-                            Err(e) => {
-                                error!(
-                                    "error occured: {} while sending the message to the channel {}",
-                                    e.to_string(),
-                                    client_id
-                                );
-                                error!("cleaing up");
-                                client_id.clone()
-                            }
+        if let Some(channels) = self.map.get_mut(&topic.clone()) {
+            let dead_channels = channels
+                .iter()
+                .map(|(client_id, channel)| {
+                    info!("sending msg to the {}", client_id);
+                    match channel.send(msg.clone()) {
+                        Ok(_n) => "".to_string(),
+                        Err(e) => {
+                            error!(
+                                "error occured: {} while sending the message to the channel {}",
+                                e.to_string(),
+                                client_id
+                            );
+                            error!("cleaing up");
+                            client_id.clone()
                         }
-                    })
-                    .collect::<Vec<_>>();
-                info!("dead_channels: {:?}", dead_channels);
-                let _ = dead_channels
-                    .iter()
-                    .map(|client_id| {
-                        self.remove_channel(topic.clone(), client_id.clone());
-                    })
-                    .collect::<Vec<_>>();
-            }
-            None => {}
-        };
+                    }
+                })
+                .collect::<Vec<_>>();
+            info!("dead_channels: {:?}", dead_channels);
+            let _ = dead_channels
+                .iter()
+                .map(|client_id| {
+                    self.remove_channel(topic.clone(), client_id.clone());
+                })
+                .collect::<Vec<_>>();
+        }
     }
 }
 
