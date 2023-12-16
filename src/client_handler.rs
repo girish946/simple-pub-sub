@@ -145,19 +145,22 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                                     },
                                     _=>{}
                                 };
-                           }
+                            }
                            if  m.header.pkt_type != message::PktType::QUERY{
                                match message::get_msg_response(m.clone()){
                                    Ok(v)=>{
-                               socket.write_all(&v).await.expect("could not convert message to bytes");
-                               },
-                               Err(e)=>{
-                                   error!("error while writing the data to the socket: {}", e.to_string());
+                                       match socket.write_all(&v).await{
+                                           Ok(_)=>{},
+                                           Err(e)=>{
+                                               error!("could not write the data to the socket: {}", e.to_string());
+                                           }
+                                       }
+                                   },
+                                   Err(e)=>{
+                                       error!("error while writing the data to the socket: {}", e.to_string());
+                                   }
                                }
-                                }
-
-                            }
-
+                           }
                         },
                         Err(_e)=>{
                             warn!("client disconnected: {}", client_id);
@@ -176,7 +179,6 @@ pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
                         },
                         Err(_e) => {},
                     }
-
                 }
             }
         }
