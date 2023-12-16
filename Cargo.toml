@@ -2,8 +2,12 @@
 name = "simple-pub-sub"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["girish946 <girish946@gmail.com>"]
+license = "MIT"
+description = "simple message broker"
+readme = "README.md"
+keywords = ["simple", "message", "broker", "pub-sub", "pub", "sub"]
+repository = "https://github.com/girish946/simple-pub-sub"
 
 [dependencies]
 tokio = { version = "1", features = ["full", "tracing"] }
