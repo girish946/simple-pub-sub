@@ -1,11 +1,10 @@
 use log::{error, trace};
 use tokio::sync::broadcast::Sender;
-pub const REGISTER: u8 = 0x01;
+
 pub const PUBLISH: u8 = 0x02;
 pub const SUBSCRIBE: u8 = 0x03;
 pub const UNSUBSCRIBE: u8 = 0x04;
 pub const QUERY: u8 = 0x05;
-pub const REGISTERACK: u8 = 0x0A;
 pub const PUBLISHACK: u8 = 0x0B;
 pub const SUBSCRIBEACK: u8 = 0x0C;
 pub const UNSUBSCRIBEACK: u8 = 0x0D;
