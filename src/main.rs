@@ -25,10 +25,6 @@ pub struct Args {
     pub log_level: Option<String>,
 }
 
-pub const LOG_LEVEL: &str = "trace";
-pub const DEFAULT_HOST: &str = "0.0.0.0";
-pub const DEFAULT_PORT: u16 = 6480;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let levels: Vec<String> = vec![

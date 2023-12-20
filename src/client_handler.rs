@@ -4,6 +4,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::Sender;
 use uuid;
+
+/// reads a data from a `TcpStream` and returns a `Msg`.
 pub async fn read_message(
     socket: &mut TcpStream,
     client_id: String,
@@ -81,6 +83,7 @@ pub async fn read_message(
     })
 }
 
+/// reads a `Msg` from the channel.
 pub async fn read_channel_msg(
     chan: Sender<message::Msg>,
 ) -> Result<message::Msg, tokio::sync::broadcast::error::RecvError> {
@@ -88,6 +91,7 @@ pub async fn read_channel_msg(
     rx.recv().await
 }
 
+/// Handels the communication between a client and the broker.
 pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
     let client_chan: tokio::sync::broadcast::Sender<message::Msg> =
         tokio::sync::broadcast::Sender::new(1);

@@ -10,18 +10,28 @@ pub const SUBSCRIBEACK: u8 = 0x0C;
 pub const UNSUBSCRIBEACK: u8 = 0x0D;
 pub const QUERYRESP: u8 = 0x0E;
 
+/// Packet type
 #[derive(Debug, Clone, PartialEq)]
 pub enum PktType {
+    /// publish
     PUBLISH,
+    /// subscribe
     SUBSCRIBE,
+    /// unsubscribe
     UNSUBSCRIBE,
+    /// query the topics
     QUERY,
+    /// acknoledgement to publish
     PUBLISHACK,
+    /// acknoledgement to subscribe
     SUBSCRIBEACK,
+    /// acknoledgement to unsubscribe
     UNSUBSCRIBEACK,
+    /// response to the query packet
     QUERYRESP,
 }
 impl PktType {
+    /// returns the byte value for a given packet type.
     pub fn to_byte(&self) -> u8 {
         match self {
             PktType::PUBLISH => PUBLISH,
@@ -50,6 +60,7 @@ impl ToString for PktType {
     }
 }
 
+/// supported versions for the pub-sub header format/protocol.
 pub const SUPPORTED_VERSIONS: [[u8; 2]; 1] = [[0x00, 0x01]];
 
 #[derive(Debug, Clone)]
@@ -63,30 +74,46 @@ pub enum HeaderError {
     InvalidResuestResponseType,
 }
 
+/// Header for the pub/sub packet
+/// total length 8 bytes.
 #[derive(Debug, Clone)]
 pub struct Header {
+    /// start byte of the packet, default value: 0x0F
     pub header: u8,
+    /// pub-sub version: two bytes.
     pub version: [u8; 2],
+    /// packet type: `PktType`
     pub pkt_type: PktType,
+    /// topic length for publishing/subscribing/querying.
     pub topic_length: u8,
+    /// message length: Max length 16 MB.
     pub message_length: u16,
+    /// padding/endo of the header: 0x00
     pub padding: u8,
 }
 
+/// structure containing the complete information about a message.
 #[derive(Debug, Clone)]
 pub struct Msg {
+    /// `Header`: the header of the message.
     pub header: Header,
+    /// The topic for the message.
     pub topic: String,
+    /// the actual message, bytes.
     pub message: Vec<u8>,
+    /// `tokio::broadcast::sync::Sender` the channel for passing the messages across.
     pub channel: Option<Sender<Msg>>,
+    /// client_id: to identify each socket connection/client.
     pub client_id: Option<String>,
 }
 
 impl Msg {
+    /// adds the given channel to the message.
     pub fn channel(&mut self, chan: Sender<Msg>) {
         self.channel = Some(chan);
     }
 
+    /// generates the response `Msg` with the given data.
     pub fn response_msg(&self, _message: Vec<u8>) -> Result<Msg, String> {
         let mut header: Header = match self.header.response_header() {
             Ok(h) => h,
@@ -105,6 +132,7 @@ impl Msg {
         })
     }
 
+    /// returns bytes for the `Msg` that can be sent to the stream.
     pub fn bytes(&self) -> Vec<u8> {
         let mut buffer: Vec<u8> = self.header.bytes();
         buffer.extend(self.topic.as_bytes().to_vec());
@@ -115,6 +143,7 @@ impl Msg {
 }
 
 impl Header {
+    /// returns a `Header` for the response `Msg`.
     pub fn response_header(&self) -> Result<Header, HeaderError> {
         let resp_type: PktType = match self.pkt_type {
             PktType::SUBSCRIBE => PktType::SUBSCRIBEACK,
@@ -136,6 +165,7 @@ impl Header {
         })
     }
 
+    /// returns the bytes for `Header`.
     pub fn bytes(&self) -> Vec<u8> {
         let bytes_ = self.message_length.to_be_bytes();
         vec![
@@ -149,6 +179,8 @@ impl Header {
             self.padding,
         ]
     }
+
+    /// returns a `Header` from bytes.
     pub fn from_vec(bytes: Vec<u8>) -> Result<Header, HeaderError> {
         if !bytes.len() == 8 {
             error!("invalid header buffer length, aborting");
@@ -220,6 +252,7 @@ impl Header {
     }
 }
 
+/// returns a response `Msg`.
 pub fn get_msg_response(msg: Msg) -> Result<Vec<u8>, String> {
     let mut resp: Vec<u8> = match msg.response_msg(msg.message.clone()) {
         Ok(m) => m.header.bytes(),
