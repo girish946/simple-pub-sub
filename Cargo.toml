@@ -1,6 +1,6 @@
 [package]
 name = "simple-pub-sub"
-version = "0.1.0"
+version = "0.1.0-rc1"
 edition = "2021"
 authors = ["girish946 <girish946@gmail.com>"]
 license = "MIT"
