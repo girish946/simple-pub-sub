@@ -8,6 +8,7 @@ description = "simple message broker"
 readme = "README.md"
 keywords = ["simple", "message", "broker", "pub-sub", "pub", "sub"]
 repository = "https://github.com/girish946/simple-pub-sub"
+exclude = ["client.py"]
 
 [dependencies]
 tokio = { version = "1", features = ["full", "tracing"] }
