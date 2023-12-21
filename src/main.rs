@@ -1,11 +1,10 @@
-pub mod client_handler;
 pub mod message;
+pub mod server;
 pub mod topics;
 use clap::{Parser, Subcommand};
 use log::info;
 use std::env;
 use std::error::Error;
-use tokio::net::TcpListener;
 
 /// client mode
 #[derive(clap::ValueEnum, Clone)]
@@ -76,19 +75,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match &cli.command {
         Commands::Server { host, port } => {
             let addr = format!("{}:{}", host, port);
-            let listener = TcpListener::bind(&addr).await?;
-            info!("Listening on: {}", addr);
-            info!("getting global broadcaster");
-
-            let tx = topics::get_global_broadcaster();
-
-            let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
-
-            loop {
-                let (socket, addr) = listener.accept().await?;
-                info!("addr is: {addr}");
-                client_handler::handle_clinet(socket, tx.clone()).await;
-            }
+            let _ = server::start_server(addr).await;
         }
         Commands::Client {
             server,
