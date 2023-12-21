@@ -172,10 +172,11 @@ pub async fn subscribe(server_url: String, topic: String) -> Result<(), tokio::i
                 msg = read_message(&mut stream, client_id.clone()) => {
                     match msg {
                         Ok(m)=>{
-                            info!("{:?}", m);
+                            info!("topic: {} message: {:?}", m.topic, m.message);
                         },
                         Err(e)=>{
                             error!("could not read message: {}", e.to_string());
+                            break;
                         }
                     }
                 }
