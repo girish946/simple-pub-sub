@@ -1,3 +1,4 @@
+pub mod client;
 pub mod message;
 pub mod server;
 pub mod topics;
@@ -93,11 +94,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         message.as_deref().unwrap_or(""),
                         topic
                     );
-                    // Publish logic here
+                    let msg = match message {
+                        Some(msg) => msg.as_bytes().to_vec(),
+                        None => vec![],
+                    };
+                    let _ = client::publish(addr, topic.clone(), msg).await;
                 }
                 ClientType::Subscribe => {
                     info!("Subscribing to topic '{}'", topic);
-                    // Subscribe logic here
+                    let _ = client::subscribe(addr, topic.clone()).await;
                 }
                 ClientType::Query => {
                     info!("Querying topic '{}'", topic);

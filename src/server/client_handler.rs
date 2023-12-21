@@ -17,7 +17,7 @@ pub async fn read_message(
     let n = match socket.read(&mut pkt_buf).await {
         Ok(n) => n,
         Err(e) => {
-            error!(
+            warn!(
                 "error occured while reading from the socket: {}",
                 e.to_string()
             );

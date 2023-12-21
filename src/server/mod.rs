@@ -2,6 +2,7 @@ mod client_handler;
 use crate::topics;
 use log::info;
 use tokio::net::TcpListener;
+
 pub async fn start_server(addr: String) -> Result<(), tokio::io::Error> {
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on: {}", addr);

@@ -63,6 +63,8 @@ impl ToString for PktType {
 /// supported versions for the pub-sub header format/protocol.
 pub const SUPPORTED_VERSIONS: [[u8; 2]; 1] = [[0x00, 0x01]];
 
+pub const DEFAULT_VERSION: [u8; 2] = [0x00, 0x01];
+
 #[derive(Debug, Clone)]
 pub enum HeaderError {
     InvalidHeaderBufferLength,
@@ -108,6 +110,21 @@ pub struct Msg {
 }
 
 impl Msg {
+    pub fn new(pkt_type: PktType, topic: String, message: Option<Vec<u8>>) -> Msg {
+        let msg: Vec<u8> = match message {
+            Some(m) => m,
+            None => vec![],
+        };
+
+        Msg {
+            header: Header::new(pkt_type, topic.len() as u8, msg.len() as u16),
+            topic,
+            message: msg,
+            channel: None,
+            client_id: None,
+        }
+    }
+
     /// adds the given channel to the message.
     pub fn channel(&mut self, chan: Sender<Msg>) {
         self.channel = Some(chan);
@@ -143,6 +160,17 @@ impl Msg {
 }
 
 impl Header {
+    pub fn new(pkt_type: PktType, topic_len: u8, message_len: u16) -> Header {
+        Header {
+            header: 0x0F,
+            version: DEFAULT_VERSION,
+            pkt_type,
+            topic_length: topic_len,
+            message_length: message_len,
+            padding: 0x00,
+        }
+    }
+
     /// returns a `Header` for the response `Msg`.
     pub fn response_header(&self) -> Result<Header, HeaderError> {
         let resp_type: PktType = match self.pkt_type {
@@ -202,6 +230,8 @@ impl Header {
             SUBSCRIBE => PktType::SUBSCRIBE,
             UNSUBSCRIBE => PktType::UNSUBSCRIBE,
             QUERY => PktType::QUERY,
+            PUBLISHACK => PktType::PUBLISHACK,
+            SUBSCRIBEACK => PktType::SUBSCRIBEACK,
             _ => {
                 error!("invalid message type, aborting");
                 return Err(HeaderError::InvalidMessageType);
