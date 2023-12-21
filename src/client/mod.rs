@@ -1,11 +1,11 @@
-use std::io::ErrorKind;
-
 use crate::message;
 use log::{debug, error, info, trace, warn};
+use std::io::ErrorKind;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
+
 pub async fn connect(server_url: String) -> Result<TcpStream, tokio::io::Error> {
     info!("connecting");
     let stream = TcpStream::connect(server_url).await?;
@@ -172,7 +172,14 @@ pub async fn subscribe(server_url: String, topic: String) -> Result<(), tokio::i
                 msg = read_message(&mut stream, client_id.clone()) => {
                     match msg {
                         Ok(m)=>{
-                            info!("topic: {} message: {:?}", m.topic, m.message);
+                            match String::from_utf8(m.message.clone()){
+                                Ok(msg_str)=>{
+                                    info!("topic: {} message: {:?}", m.topic, msg_str);
+                                    },
+                                Err(_)=>{
+                                    info!("topic: {} message: {:?}", m.topic, m.message);
+                                }
+                            };
                         },
                         Err(e)=>{
                             error!("could not read message: {}", e.to_string());

@@ -18,7 +18,7 @@ enum ClientType {
 /// log leve for the client/server
 #[derive(clap::ValueEnum, Clone)]
 enum LogLevel {
-    Teace,
+    Trace,
     Warn,
     Info,
     Error,
@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
 
     let log_level: &str = match cli.log_level {
-        Some(LogLevel::Teace) => "trace",
+        Some(LogLevel::Trace) => "trace",
         Some(LogLevel::Warn) => "warn",
         Some(LogLevel::Info) => "info",
         Some(LogLevel::Error) => "error",
