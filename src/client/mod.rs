@@ -43,8 +43,8 @@ pub async fn read_message(
 ) -> Result<message::Msg, String> {
     let mut pkt_buf: Vec<u8>;
     pkt_buf = vec![0; 512];
-    info!("reading...");
-    info!("the size of buffer is: {}", pkt_buf.len());
+
+    trace!("the size of buffer is: {}", pkt_buf.len());
     let n = match socket.read(&mut pkt_buf).await {
         Ok(n) => n,
         Err(e) => {
@@ -68,7 +68,7 @@ pub async fn read_message(
             return Err("".to_string());
         }
     };
-    info!("{:?}", header);
+    debug!("{:?}", header);
 
     let topic: String =
         match String::from_utf8(pkt_buf[8..(8 + header.topic_length).into()].to_vec()) {
