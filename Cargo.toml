@@ -8,6 +8,7 @@ description = "simple message broker"
 readme = "README.md"
 keywords = ["simple", "message", "broker", "pub-sub"]
 repository = "https://github.com/girish946/simple-pub-sub"
+categories = ["command-line-interface", "command-line-utilities", "message-bus"]
 exclude = ["client.py"]
 
 [dependencies]
