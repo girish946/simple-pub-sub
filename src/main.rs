@@ -3,7 +3,7 @@ pub mod message;
 pub mod server;
 pub mod topics;
 use clap::{Parser, Subcommand};
-use log::info;
+use log::{error, info};
 use std::env;
 use std::error::Error;
 
@@ -87,6 +87,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         } => {
             let addr = format!("{server}:{port}");
             info!("connecting to: {addr}");
+            let mut client = client::Client::new(server.clone(), port.clone());
+            match client.connect().await {
+                Ok(()) => {}
+                Err(e) => {
+                    error!("{}", e.to_string());
+                    return Ok(());
+                }
+            };
             match client_type {
                 ClientType::Publish => {
                     info!(
@@ -98,11 +106,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         Some(msg) => msg.as_bytes().to_vec(),
                         None => vec![],
                     };
-                    let _ = client::publish(addr, topic.clone(), msg).await;
+                    let _ = client.publish(topic.clone(), msg).await;
                 }
                 ClientType::Subscribe => {
                     info!("Subscribing to topic '{}'", topic);
-                    let _ = client::subscribe(addr, topic.clone()).await;
+                    let _ = client.subscribe(topic.clone()).await;
                 }
                 ClientType::Query => {
                     info!("Querying topic '{}'", topic);
