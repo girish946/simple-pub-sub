@@ -5,12 +5,24 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
-
+type Callback = fn(String, Vec<u8>);
 #[derive(Debug)]
 pub struct Client {
     pub server: String,
     pub port: u16,
     stream: Option<TcpStream>,
+    callback: Option<Callback>,
+}
+
+fn on_message(topic: String, message: Vec<u8>) {
+    match String::from_utf8(message.clone()) {
+        Ok(msg_str) => {
+            info!("topic: {} message: {}", topic, msg_str);
+        }
+        Err(_) => {
+            info!("topic: {} message: {:?}", topic, message);
+        }
+    };
 }
 
 impl Client {
@@ -19,11 +31,15 @@ impl Client {
             server,
             port,
             stream: None,
+            callback: None,
         }
     }
 
+    pub fn on_message(&mut self, callback: Callback) {
+        self.callback = Some(callback)
+    }
+
     pub async fn connect(&mut self) -> Result<(), tokio::io::Error> {
-        info!("connecting");
         let server_url: String = format!("{}:{}", self.server, self.port);
         let stream = TcpStream::connect(server_url).await?;
         self.stream = Some(stream);
@@ -188,16 +204,12 @@ impl Client {
                 };
                 loop {
                     match Self::read_message(&mut s).await {
-                        Ok(m) => {
-                            match String::from_utf8(m.message.clone()) {
-                                Ok(msg_str) => {
-                                    info!("topic: {} message: {:?}", m.topic, msg_str);
-                                }
-                                Err(_) => {
-                                    info!("topic: {} message: {:?}", m.topic, m.message);
-                                }
-                            };
-                        }
+                        Ok(m) => match self.callback {
+                            Some(fn_) => {
+                                fn_(m.topic, m.message);
+                            }
+                            None => on_message(m.topic, m.message),
+                        },
                         Err(e) => {
                             error!("could not read message: {}", e.to_string());
                             break;

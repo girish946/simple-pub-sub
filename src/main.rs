@@ -87,6 +87,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         } => {
             let addr = format!("{server}:{port}");
             info!("connecting to: {addr}");
+
             let mut client = client::Client::new(server.clone(), port.clone());
             match client.connect().await {
                 Ok(()) => {}
@@ -95,6 +96,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     return Ok(());
                 }
             };
+            fn on_message(topic: String, message: Vec<u8>) {
+                info!("received: {:?} on {}", message, topic);
+            }
+            client.on_message(on_message);
+
             match client_type {
                 ClientType::Publish => {
                     info!(
