@@ -5,6 +5,7 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
 };
+
 type Callback = fn(String, Vec<u8>);
 #[derive(Debug)]
 pub struct Client {
@@ -14,6 +15,7 @@ pub struct Client {
     callback: Option<Callback>,
 }
 
+/// default implementation for callback function
 fn on_message(topic: String, message: Vec<u8>) {
     match String::from_utf8(message.clone()) {
         Ok(msg_str) => {
@@ -186,6 +188,53 @@ impl Client {
 
         Ok(())
     }
+
+    pub async fn query(self, topic: String) -> Result<String, tokio::io::Error> {
+        let msg: message::Msg = message::Msg::new(
+            message::PktType::QUERY,
+            topic,
+            Some("a".to_string().as_bytes().to_vec()),
+        );
+        trace!("msg: {:?}", msg);
+
+        match self.stream {
+            Some(mut s) => match s.write_all(&msg.bytes()).await {
+                Ok(_) => {
+                    match Self::read_message(&mut s).await {
+                        Ok(msg) => {
+                            match String::from_utf8(msg.message.clone()) {
+                                Ok(msg_str) => {
+                                    return Ok(msg_str);
+                                }
+                                Err(e) => {
+                                    return Err(tokio::io::Error::new(
+                                        tokio::io::ErrorKind::Other,
+                                        e.to_string(),
+                                    ));
+                                }
+                            };
+                        }
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    };
+                }
+                Err(e) => {
+                    return Err(tokio::io::Error::new(
+                        tokio::io::ErrorKind::Other,
+                        e.to_string(),
+                    ));
+                }
+            },
+            None => {
+                return Err(tokio::io::Error::new(
+                    tokio::io::ErrorKind::Other,
+                    "client not connected yet.".to_string(),
+                ));
+            }
+        };
+    }
+
     pub async fn subscribe(self, topic: String) -> Result<(), tokio::io::Error> {
         match self.stream {
             Some(mut s) => {

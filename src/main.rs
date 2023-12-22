@@ -120,7 +120,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 ClientType::Query => {
                     info!("Querying topic '{}'", topic);
-                    // Query logic here
+                    match client.query(topic.clone()).await {
+                        Ok(resp) => {
+                            info!("{}", resp)
+                        }
+                        Err(e) => {
+                            error!("{}", e.to_string())
+                        }
+                    };
                 }
             }
         }

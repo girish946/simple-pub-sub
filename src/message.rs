@@ -232,6 +232,7 @@ impl Header {
             QUERY => PktType::QUERY,
             PUBLISHACK => PktType::PUBLISHACK,
             SUBSCRIBEACK => PktType::SUBSCRIBEACK,
+            QUERYRESP => PktType::QUERYRESP,
             _ => {
                 error!("invalid message type, aborting");
                 return Err(HeaderError::InvalidMessageType);
@@ -249,6 +250,10 @@ impl Header {
                     return Err(HeaderError::InvalidTopicLength);
                 }
                 PktType::UNSUBSCRIBE => {
+                    error!("invalid topic length, aborting");
+                    return Err(HeaderError::InvalidTopicLength);
+                }
+                PktType::QUERY => {
                     error!("invalid topic length, aborting");
                     return Err(HeaderError::InvalidTopicLength);
                 }
