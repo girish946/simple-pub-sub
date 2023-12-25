@@ -130,6 +130,10 @@ impl Msg {
         self.channel = Some(chan);
     }
 
+    pub fn client_id(&mut self, client_id: String) {
+        self.client_id = Some(client_id);
+    }
+
     /// generates the response `Msg` with the given data.
     pub fn response_msg(&self, _message: Vec<u8>) -> Result<Msg, String> {
         let mut header: Header = match self.header.response_header() {

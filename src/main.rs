@@ -1,6 +1,7 @@
 pub mod client;
 pub mod message;
 pub mod server;
+pub mod stream;
 pub mod topics;
 use clap::{Parser, Subcommand};
 use log::{error, info};
@@ -96,10 +97,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     return Ok(());
                 }
             };
-            fn on_message(topic: String, message: Vec<u8>) {
-                info!("received: {:?} on {}", message, topic);
-            }
-            client.on_message(on_message);
+
+            client.on_message(client::on_message);
 
             match client_type {
                 ClientType::Publish => {
