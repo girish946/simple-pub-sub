@@ -11,6 +11,14 @@ repository = "https://github.com/girish946/simple-pub-sub"
 categories = ["command-line-interface", "command-line-utilities", "message-bus"]
 exclude = ["client.py"]
 
+[lib]
+name = "simple_pub_sub"
+path = "src/lib.rs"
+
+[[bin]]
+name = "simple-pub-sub"
+path = "src/main.rs"
+
 [dependencies]
 tokio = { version = "1", features = ["full", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }

@@ -1,10 +1,6 @@
-pub mod client;
-pub mod message;
-pub mod server;
-pub mod stream;
-pub mod topics;
 use clap::{Parser, Subcommand};
 use log::{error, info};
+use simple_pub_sub::{client, server};
 use std::env;
 use std::error::Error;
 
