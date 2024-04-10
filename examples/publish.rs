@@ -1,4 +1,3 @@
-// use simple-pub-sub
 use simple_pub_sub;
 
 #[tokio::main]
