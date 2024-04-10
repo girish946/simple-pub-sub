@@ -69,15 +69,15 @@ impl Client {
                         return Err(e);
                     }
                 };
-                return Ok(buf);
+                Ok(buf)
             }
             None => {
-                return Err(tokio::io::Error::new(
+                Err(tokio::io::Error::new(
                     tokio::io::ErrorKind::Other,
                     "client not connected yet.",
-                ));
+                ))
             }
-        };
+        }
     }
 
     pub async fn publish(self, topic: String, message: Vec<u8>) -> Result<(), tokio::io::Error> {
@@ -116,35 +116,35 @@ impl Client {
                         Ok(msg) => {
                             match String::from_utf8(msg.message.clone()) {
                                 Ok(msg_str) => {
-                                    return Ok(msg_str);
+                                    Ok(msg_str)
                                 }
                                 Err(e) => {
-                                    return Err(tokio::io::Error::new(
+                                    Err(tokio::io::Error::new(
                                         tokio::io::ErrorKind::Other,
                                         e.to_string(),
-                                    ));
+                                    ))
                                 }
-                            };
+                            }
                         }
                         Err(e) => {
-                            return Err(e);
+                            Err(e)
                         }
-                    };
+                    }
                 }
                 Err(e) => {
-                    return Err(tokio::io::Error::new(
+                    Err(tokio::io::Error::new(
                         tokio::io::ErrorKind::Other,
                         e.to_string(),
-                    ));
+                    ))
                 }
             },
             None => {
-                return Err(tokio::io::Error::new(
+                Err(tokio::io::Error::new(
                     tokio::io::ErrorKind::Other,
                     "client not connected yet.".to_string(),
-                ));
+                ))
             }
-        };
+        }
     }
 
     pub async fn subscribe(self, topic: String) -> Result<(), tokio::io::Error> {
@@ -181,10 +181,10 @@ impl Client {
                 Ok(())
             }
             None => {
-                return Err(tokio::io::Error::new(
+                Err(tokio::io::Error::new(
                     tokio::io::ErrorKind::Other,
                     "client not connected yet.".to_string(),
-                ));
+                ))
             }
         }
     }

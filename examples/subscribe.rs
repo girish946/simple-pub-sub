@@ -1,5 +1,5 @@
 // use simple-pub-sub
-use simple_pub_sub;
+
 
 // define the on_message function (callback).
 pub fn on_msg(topic: String, message: Vec<u8>) {

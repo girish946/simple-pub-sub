@@ -85,7 +85,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let addr = format!("{server}:{port}");
             info!("connecting to: {addr}");
 
-            let mut client = client::Client::new(server.clone(), port.clone());
+            let mut client = client::Client::new(server.clone(), *port);
             match client.connect().await {
                 Ok(()) => {}
                 Err(e) => {
