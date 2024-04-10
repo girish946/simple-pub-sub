@@ -1,5 +1,3 @@
-
-
 #[tokio::main]
 async fn main() -> Result<(), String> {
     // initialize the client.

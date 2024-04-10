@@ -71,12 +71,10 @@ impl Client {
                 };
                 Ok(buf)
             }
-            None => {
-                Err(tokio::io::Error::new(
-                    tokio::io::ErrorKind::Other,
-                    "client not connected yet.",
-                ))
-            }
+            None => Err(tokio::io::Error::new(
+                tokio::io::ErrorKind::Other,
+                "client not connected yet.",
+            )),
         }
     }
 
@@ -111,39 +109,25 @@ impl Client {
 
         match self.stream {
             Some(mut s) => match s.write_all(&msg.bytes()).await {
-                Ok(_) => {
-                    match stream::read_message(&mut s).await {
-                        Ok(msg) => {
-                            match String::from_utf8(msg.message.clone()) {
-                                Ok(msg_str) => {
-                                    Ok(msg_str)
-                                }
-                                Err(e) => {
-                                    Err(tokio::io::Error::new(
-                                        tokio::io::ErrorKind::Other,
-                                        e.to_string(),
-                                    ))
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            Err(e)
-                        }
-                    }
-                }
-                Err(e) => {
-                    Err(tokio::io::Error::new(
-                        tokio::io::ErrorKind::Other,
-                        e.to_string(),
-                    ))
-                }
-            },
-            None => {
-                Err(tokio::io::Error::new(
+                Ok(_) => match stream::read_message(&mut s).await {
+                    Ok(msg) => match String::from_utf8(msg.message.clone()) {
+                        Ok(msg_str) => Ok(msg_str),
+                        Err(e) => Err(tokio::io::Error::new(
+                            tokio::io::ErrorKind::Other,
+                            e.to_string(),
+                        )),
+                    },
+                    Err(e) => Err(e),
+                },
+                Err(e) => Err(tokio::io::Error::new(
                     tokio::io::ErrorKind::Other,
-                    "client not connected yet.".to_string(),
-                ))
-            }
+                    e.to_string(),
+                )),
+            },
+            None => Err(tokio::io::Error::new(
+                tokio::io::ErrorKind::Other,
+                "client not connected yet.".to_string(),
+            )),
         }
     }
 
@@ -180,12 +164,10 @@ impl Client {
 
                 Ok(())
             }
-            None => {
-                Err(tokio::io::Error::new(
-                    tokio::io::ErrorKind::Other,
-                    "client not connected yet.".to_string(),
-                ))
-            }
+            None => Err(tokio::io::Error::new(
+                tokio::io::ErrorKind::Other,
+                "client not connected yet.".to_string(),
+            )),
         }
     }
 }
