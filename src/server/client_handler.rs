@@ -2,7 +2,6 @@ use crate::message;
 use crate::stream;
 use log::{error, info, warn};
 use tokio::io::AsyncWriteExt;
-use tokio::net::TcpStream;
 use tokio::sync::broadcast::Sender;
 use uuid;
 
@@ -15,7 +14,16 @@ pub async fn read_channel_msg(
 }
 
 /// Handels the communication between a client and the broker.
-pub async fn handle_clinet(mut socket: TcpStream, chan: Sender<message::Msg>) {
+pub async fn handle_clinet<S>(mut socket: S, chan: Sender<message::Msg>)
+where
+    S: AsyncWriteExt
+        + Unpin
+        + Send
+        + tokio::io::AsyncReadExt
+        + std::marker::Unpin
+        + std::marker::Send
+        + 'static,
+{
     let client_chan: tokio::sync::broadcast::Sender<message::Msg> =
         tokio::sync::broadcast::Sender::new(1);
     let client_id = uuid::Uuid::new_v4().to_string();

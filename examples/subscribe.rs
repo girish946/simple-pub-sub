@@ -6,8 +6,13 @@ pub fn on_msg(topic: String, message: Vec<u8>) {
 }
 #[tokio::main]
 async fn main() -> Result<(), String> {
+    let client_type = simple_pub_sub::client::PubSubTcpClient {
+        server: "localhost".to_string(),
+        port: 6480,
+    };
     // initialize the client.
-    let mut client = simple_pub_sub::client::Client::new("localhost".to_string(), 6480);
+    let mut client =
+        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
     // set the callback function.
     client.on_message(on_msg);
     // connect the client.
