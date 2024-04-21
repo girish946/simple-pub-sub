@@ -27,7 +27,5 @@ jobs:
           # A file, directory or wildcard pattern that describes what to upload
           path: |
             target/release/simple-pub-sub
-            simple-pub-sub.bash
-            simple-pub-sub.1
-        env:
-          MAN_PAGE_DIR: ${{GITHUB_WORKSPACE}}
+            target/release/simple-pub-sub.bash
+            target/release/simple-pub-sub.1

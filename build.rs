@@ -1,11 +1,19 @@
 use clap::CommandFactory;
+
 include!("src/cli.rs");
 fn main() -> Result<(), std::io::Error> {
-    let out_dir = std::path::PathBuf::from(
-        std::env::var_os("MAN_PAGE_DIR")
-            .ok_or(std::io::ErrorKind::NotFound)
-            .unwrap(),
-    );
+    let out_dir_env = std::env::var("OUT_DIR").expect("OUT_DIR not set");
+    println!("OUT_DIR: {}", out_dir_env);
+    let target_dir = std::path::PathBuf::from(&out_dir_env)
+        .ancestors() // Iterate up through parent directories
+        .nth(3) // This goes up three levels from OUT_DIR: out -> build -> debug/release -> target
+        .map(|p| p.to_path_buf())
+        .expect("Failed to determine target directory");
+
+    println!("target_dir: {:?}", target_dir);
+
+    let out_dir = std::path::PathBuf::from(target_dir);
+
     println!("out_dir: {:?}", out_dir);
 
     let mut cmd = Cli::command();
