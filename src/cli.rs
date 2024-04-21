@@ -53,18 +53,13 @@ pub enum Commands {
         server_type: ServerType,
     },
     Client {
-        /// server
-        server: String,
-        /// server port
-        port: u16,
+        #[clap(subcommand)]
+        server_tyepe: ServerType,
         /// client mode
         client_type: ClientType,
         /// topic to publish/subscribe
         topic: String,
         /// message to be published
         message: Option<String>,
-
-        /// socket type
-        socket: Option<String>,
     },
 }
