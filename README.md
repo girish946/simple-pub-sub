@@ -90,7 +90,7 @@ async fn main() -> Result<(), String> {
 }
 ```
 
-To push a message
+To publish a message
 
 ```rust
 use simple_pub_sub;
