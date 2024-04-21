@@ -29,3 +29,5 @@ jobs:
             target/release/simple-pub-sub
             simple-pub-sub.bash
             simple-pub-sub.1
+        env:
+          MAN_PAGE_DIR: ${{GITHUB_WORKSPACE}}
