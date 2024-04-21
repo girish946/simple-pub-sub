@@ -28,3 +28,8 @@ log = "0.4.20"
 uuid = { version = "1.6.1", features = ["v4"] }
 clap = { version = "4.4.11", features = ["derive", "cargo"] }
 mio = "0.8.11"
+clap_mangen = "0.2.20"
+
+#[build-dependencies]
+
+clap_complete = "4.5.2"

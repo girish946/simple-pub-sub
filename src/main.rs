@@ -1,77 +1,10 @@
-use clap::{Parser, Subcommand};
+pub mod cli;
+use crate::cli::{Cli, ClientType, Commands, LogLevel, ServerType};
+use clap::Parser;
 use log::{error, info};
 use simple_pub_sub::{client, server};
 use std::env;
 use std::error::Error;
-
-/// client mode
-#[derive(clap::ValueEnum, Clone)]
-enum ClientType {
-    Publish,
-    Subscribe,
-    Query,
-}
-
-/// log leve for the client/server
-#[derive(clap::ValueEnum, Clone)]
-enum LogLevel {
-    Trace,
-    Warn,
-    Info,
-    Error,
-    Debug,
-}
-
-/// the server type subcommand
-#[derive(Subcommand)]
-enum ServerType {
-    /// tcp server
-    Tcp {
-        /// host
-        host: String,
-        /// port
-        port: u16,
-    },
-    /// unix server
-    Unix {
-        /// path
-        path: String,
-    },
-}
-
-#[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
-struct Cli {
-    #[clap(subcommand)]
-    command: Commands,
-
-    /// log level, default: info
-    #[clap(long, global = true)]
-    log_level: Option<LogLevel>,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    Server {
-        #[clap(subcommand)]
-        server_type: ServerType,
-    },
-    Client {
-        /// server
-        server: String,
-        /// server port
-        port: u16,
-        /// client mode
-        client_type: ClientType,
-        /// topic to publish/subscribe
-        topic: String,
-        /// message to be published
-        message: Option<String>,
-
-        /// socket type
-        socket: Option<String>,
-    },
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
