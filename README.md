@@ -26,9 +26,8 @@ So it's a 8 byte header followed by the topic and message.
     ```
 
 - Client:
-    - subscribe:
-      - Using Tcp socket:
-
+    - Using Tcp socket:
+      - subscribe:
         ```bash
         simple-pub-sub client tcp 0.0.0.0 6480 subscribe the_topic --log-level trace
         ```
@@ -44,7 +43,7 @@ So it's a 8 byte header followed by the topic and message.
         ```bash
         simple-pub-sub client tcp 0.0.0.0 6480 query the_topic --log-level trace
         ```
-      - Using Unix socket:
+    - Using Unix socket:
 
         ```bash
         simple-pub-sub client unix /tmp/pubsub.sock subscribe the_topic --log-level trace
