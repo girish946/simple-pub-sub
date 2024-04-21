@@ -21,6 +21,7 @@ pub async fn start_server(addr: String) -> Result<(), tokio::io::Error> {
 }
 
 pub async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
+    std::fs::remove_file(path.clone())?;
     let listener = UnixListener::bind(&path)?;
     info!("Listening on: {}", path);
     info!("getting global broadcaster");

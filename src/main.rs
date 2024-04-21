@@ -31,44 +31,37 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let _ = server::start_unix_server(path.clone()).await;
             }
         },
-        // Commands::Server { host, port } => {
-
-        //     let addr = format!("{}:{}", host, port);
-        //     let _ = server::start_server(addr).await;
-        // }
         Commands::Client {
-            server,
-            port,
             client_type,
             topic,
             message,
-            socket,
+            server_tyepe,
         } => {
-            let addr = format!("{server}:{port}");
-            info!("connecting to: {addr}");
-            let client_: client::PubSubClient;
-            match socket {
-                Some(socket) => {
-                    if socket == "unix" {
-                        client_ = client::PubSubClient::Unix(client::PubSubUnixClient {
-                            path: server.clone(),
-                        });
-                    } else if socket == "tcp" {
-                        client_ = client::PubSubClient::Tcp(client::PubSubTcpClient {
-                            server: server.clone(),
-                            port: *port,
-                        });
-                    } else {
-                        return Err("socket type not supported".into());
-                    }
-                }
-                None => {
-                    client_ = client::PubSubClient::Tcp(client::PubSubTcpClient {
-                        server: "0.0.0.0".to_string(),
-                        port: 6480,
-                    });
-                }
+            let (server, port, socket): (&String, Option<&u16>, String) = match server_tyepe {
+                ServerType::Tcp { host, port } => (host, Some(port), "tcp".to_string()),
+                ServerType::Unix { path } => (path, Some(&0), "unix".to_string()),
             };
+
+            let client_: client::PubSubClient;
+
+            if socket == "unix" {
+                client_ = client::PubSubClient::Unix(client::PubSubUnixClient {
+                    path: server.clone(),
+                });
+            } else if socket == "tcp" {
+                let port = match port {
+                    Some(port) => port.clone(),
+                    None => 6480,
+                };
+                let addr = format!("{server}:{port}");
+                info!("connecting to: {addr}");
+                client_ = client::PubSubClient::Tcp(client::PubSubTcpClient {
+                    server: server.clone(),
+                    port,
+                });
+            } else {
+                return Err("socket type not supported".into());
+            }
 
             let mut client = client::Client::new(client_);
             match client.connect().await {
