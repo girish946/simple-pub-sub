@@ -1,9 +1,12 @@
 use crate::message;
 use log::{debug, error, trace, warn};
 use tokio::io::AsyncReadExt;
-use tokio::net::TcpStream;
+
 /// reads a data from a `TcpStream` and returns a `Msg`.
-pub async fn read_message(s: &mut TcpStream) -> Result<message::Msg, tokio::io::Error> {
+pub async fn read_message<S>(s: &mut S) -> Result<message::Msg, tokio::io::Error>
+where
+    S: AsyncReadExt + Unpin + Send,
+{
     let mut pkt_buf: Vec<u8>;
     pkt_buf = vec![0; 512];
 

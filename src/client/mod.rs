@@ -5,14 +5,38 @@ use std::io::ErrorKind;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
+    net::UnixStream,
 };
 
-type Callback = fn(String, Vec<u8>);
-#[derive(Debug)]
-pub struct Client {
+#[derive(Debug, Clone)]
+pub struct PubSubTcpClient {
     pub server: String,
     pub port: u16,
-    stream: Option<TcpStream>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PubSubUnixClient {
+    pub path: String,
+}
+
+#[derive(Debug, Clone)]
+pub enum PubSubClient {
+    Tcp(PubSubTcpClient),
+    Unix(PubSubUnixClient),
+}
+
+#[derive(Debug)]
+pub enum StreamType {
+    Tcp(TcpStream),
+    Unix(UnixStream),
+}
+
+type Callback = fn(String, Vec<u8>);
+
+#[derive(Debug)]
+pub struct Client {
+    pub client_type: PubSubClient,
+    stream: Option<StreamType>,
     callback: Option<Callback>,
 }
 
@@ -29,10 +53,9 @@ pub fn on_message(topic: String, message: Vec<u8>) {
 }
 
 impl Client {
-    pub fn new(server: String, port: u16) -> Client {
+    pub fn new(client_type: PubSubClient) -> Client {
         Client {
-            server,
-            port,
+            client_type,
             stream: None,
             callback: None,
         }
@@ -43,33 +66,66 @@ impl Client {
     }
 
     pub async fn connect(&mut self) -> Result<(), tokio::io::Error> {
-        let server_url: String = format!("{}:{}", self.server, self.port);
-        let stream = TcpStream::connect(server_url).await?;
-        self.stream = Some(stream);
+        match self.client_type.clone() {
+            PubSubClient::Tcp(tcp_client) => {
+                let server_url: String = format!("{}:{}", tcp_client.server, tcp_client.port);
+                let stream = TcpStream::connect(server_url).await?;
+                self.stream = Some(StreamType::Tcp(stream));
+            }
+            PubSubClient::Unix(unix_stream) => {
+                let path = unix_stream.path;
+                let stream = UnixStream::connect(path).await?;
+                self.stream = Some(StreamType::Unix(stream));
+            }
+        }
         Ok(())
     }
 
     pub async fn post(self, msg: message::Msg) -> Result<Vec<u8>, tokio::io::Error> {
         match self.stream {
-            Some(mut s) => {
-                match s.write_all(&msg.bytes()).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!("could not send the data to the server: {}", e.to_string());
-                        return Err(e);
+            Some(s) => {
+                match s {
+                    StreamType::Tcp(mut tcp_stream) => {
+                        match tcp_stream.write_all(&msg.bytes()).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("could not send the data to the server: {}", e.to_string());
+                                return Err(e);
+                            }
+                        }
+                        let mut buf: Vec<u8>;
+                        buf = vec![0; 8];
+                        trace!("reading the ack:");
+                        let _ = match tcp_stream.read(&mut buf).await {
+                            Ok(n) => n,
+                            Err(e) => {
+                                error!("could not retrive ack for published packet");
+                                return Err(e);
+                            }
+                        };
+                        return Ok(buf);
                     }
-                }
-                let mut buf: Vec<u8>;
-                buf = vec![0; 8];
-                trace!("reading the ack:");
-                let _ = match s.read(&mut buf).await {
-                    Ok(n) => n,
-                    Err(e) => {
-                        error!("could not retrive ack for published packet");
-                        return Err(e);
+                    StreamType::Unix(mut unix_stream) => {
+                        match unix_stream.write_all(&msg.bytes()).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("could not send the data to the server: {}", e.to_string());
+                                return Err(e);
+                            }
+                        }
+                        let mut buf: Vec<u8>;
+                        buf = vec![0; 8];
+                        trace!("reading the ack:");
+                        let _ = match unix_stream.read(&mut buf).await {
+                            Ok(n) => n,
+                            Err(e) => {
+                                error!("could not retrive ack for published packet");
+                                return Err(e);
+                            }
+                        };
+                        return Ok(buf);
                     }
                 };
-                Ok(buf)
             }
             None => Err(tokio::io::Error::new(
                 tokio::io::ErrorKind::Other,
@@ -108,21 +164,41 @@ impl Client {
         trace!("msg: {:?}", msg);
 
         match self.stream {
-            Some(mut s) => match s.write_all(&msg.bytes()).await {
-                Ok(_) => match stream::read_message(&mut s).await {
-                    Ok(msg) => match String::from_utf8(msg.message.clone()) {
-                        Ok(msg_str) => Ok(msg_str),
+            Some(s) => match s {
+                StreamType::Tcp(mut tcp_stream) => match tcp_stream.write_all(&msg.bytes()).await {
+                    Ok(_) => match stream::read_message(&mut tcp_stream).await {
+                        Ok(msg) => match String::from_utf8(msg.message.clone()) {
+                            Ok(msg_str) => Ok(msg_str),
+                            Err(e) => Err(tokio::io::Error::new(
+                                tokio::io::ErrorKind::Other,
+                                e.to_string(),
+                            )),
+                        },
+                        Err(e) => Err(e),
+                    },
+                    Err(e) => Err(tokio::io::Error::new(
+                        tokio::io::ErrorKind::Other,
+                        e.to_string(),
+                    )),
+                },
+                StreamType::Unix(mut unix_stream) => {
+                    match unix_stream.write_all(&msg.bytes()).await {
+                        Ok(_) => match stream::read_message(&mut unix_stream).await {
+                            Ok(msg) => match String::from_utf8(msg.message.clone()) {
+                                Ok(msg_str) => Ok(msg_str),
+                                Err(e) => Err(tokio::io::Error::new(
+                                    tokio::io::ErrorKind::Other,
+                                    e.to_string(),
+                                )),
+                            },
+                            Err(e) => Err(e),
+                        },
                         Err(e) => Err(tokio::io::Error::new(
                             tokio::io::ErrorKind::Other,
                             e.to_string(),
                         )),
-                    },
-                    Err(e) => Err(e),
-                },
-                Err(e) => Err(tokio::io::Error::new(
-                    tokio::io::ErrorKind::Other,
-                    e.to_string(),
-                )),
+                    }
+                }
             },
             None => Err(tokio::io::Error::new(
                 tokio::io::ErrorKind::Other,
@@ -133,34 +209,64 @@ impl Client {
 
     pub async fn subscribe(self, topic: String) -> Result<(), tokio::io::Error> {
         match self.stream {
-            Some(mut s) => {
+            Some(s) => {
                 let msg: message::Msg = message::Msg::new(message::PktType::SUBSCRIBE, topic, None);
                 trace!("msg: {:?}", msg);
 
-                match s.write_all(&msg.bytes()).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!("could not send the data to the server: {}", e.to_string());
-                        return Err(tokio::io::Error::new(
-                            tokio::io::ErrorKind::Other,
-                            e.to_string(),
-                        ));
+                match s {
+                    StreamType::Tcp(mut tcp_stream) => {
+                        match tcp_stream.write_all(&msg.bytes()).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("could not send the data to the server: {}", e.to_string());
+                                return Err(tokio::io::Error::new(
+                                    tokio::io::ErrorKind::Other,
+                                    e.to_string(),
+                                ));
+                            }
+                        };
+                        loop {
+                            match stream::read_message(&mut tcp_stream).await {
+                                Ok(m) => match self.callback {
+                                    Some(fn_) => {
+                                        fn_(m.topic, m.message);
+                                    }
+                                    None => on_message(m.topic, m.message),
+                                },
+                                Err(e) => {
+                                    error!("could not read message: {}", e.to_string());
+                                    break;
+                                }
+                            };
+                        }
+                    }
+                    StreamType::Unix(mut unix_stream) => {
+                        match unix_stream.write_all(&msg.bytes()).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("could not send the data to the server: {}", e.to_string());
+                                return Err(tokio::io::Error::new(
+                                    tokio::io::ErrorKind::Other,
+                                    e.to_string(),
+                                ));
+                            }
+                        };
+                        loop {
+                            match stream::read_message(&mut unix_stream).await {
+                                Ok(m) => match self.callback {
+                                    Some(fn_) => {
+                                        fn_(m.topic, m.message);
+                                    }
+                                    None => on_message(m.topic, m.message),
+                                },
+                                Err(e) => {
+                                    error!("could not read message: {}", e.to_string());
+                                    break;
+                                }
+                            };
+                        }
                     }
                 };
-                loop {
-                    match stream::read_message(&mut s).await {
-                        Ok(m) => match self.callback {
-                            Some(fn_) => {
-                                fn_(m.topic, m.message);
-                            }
-                            None => on_message(m.topic, m.message),
-                        },
-                        Err(e) => {
-                            error!("could not read message: {}", e.to_string());
-                            break;
-                        }
-                    };
-                }
 
                 Ok(())
             }
