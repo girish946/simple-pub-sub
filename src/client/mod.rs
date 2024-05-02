@@ -8,31 +8,37 @@ use tokio::{
     net::UnixStream,
 };
 
+/// Simple pub sub Client for Tcp connection
 #[derive(Debug, Clone)]
 pub struct PubSubTcpClient {
     pub server: String,
     pub port: u16,
 }
 
+/// Simple pub sub Client for Unix connection
 #[derive(Debug, Clone)]
 pub struct PubSubUnixClient {
     pub path: String,
 }
 
+/// Simple pub sub Client
 #[derive(Debug, Clone)]
 pub enum PubSubClient {
     Tcp(PubSubTcpClient),
     Unix(PubSubUnixClient),
 }
 
+/// Stream for Tcp and Unix connection
 #[derive(Debug)]
 pub enum StreamType {
     Tcp(TcpStream),
     Unix(UnixStream),
 }
 
+/// on_message callback function
 type Callback = fn(String, Vec<u8>);
 
+/// Simple pub sub Client
 #[derive(Debug)]
 pub struct Client {
     pub client_type: PubSubClient,
