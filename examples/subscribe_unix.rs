@@ -1,18 +1,16 @@
-// use simple-pub-sub
-
 // define the on_message function (callback).
 pub fn on_msg(topic: String, message: Vec<u8>) {
     println!("topic: {} message: {:?}", topic, message)
 }
 #[tokio::main]
 async fn main() -> Result<(), String> {
-    let client_type = simple_pub_sub::client::PubSubTcpClient {
-        server: "localhost".to_string(),
-        port: 6480,
+    let client_type = simple_pub_sub::client::PubSubUnixClient {
+        path: "/tmp/simple.sock".to_string(),
     };
     // initialize the client.
-    let mut client =
-        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
+    let mut client = simple_pub_sub::client::Client::new(
+        simple_pub_sub::client::PubSubClient::Unix(client_type),
+    );
     // set the callback function.
     client.on_message(on_msg);
     // connect the client.
