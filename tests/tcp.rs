@@ -9,7 +9,7 @@ mod tests {
     async fn start_serever() {
         let addr = "localhost:6480".to_string();
         println!("server started");
-        let _ = simple_pub_sub::server::start_server(addr).await;
+        let _ = simple_pub_sub::server::start_tcp_server(addr).await;
     }
 
     #[tokio::test]
@@ -39,6 +39,7 @@ mod tests {
             .await;
         info!("{:?}", result);
 
+        sleep(Duration::from_millis(1000)).await;
         assert_eq!(true, result.is_ok());
     }
 

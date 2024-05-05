@@ -3,8 +3,8 @@ use crate::topics;
 use log::info;
 use tokio::net::TcpListener;
 use tokio::net::UnixListener;
-
-pub async fn start_server(addr: String) -> Result<(), tokio::io::Error> {
+/// Starts a tcp server on the given address
+pub async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on: {}", addr);
     info!("getting global broadcaster");
