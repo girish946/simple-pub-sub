@@ -3,6 +3,7 @@ use crate::topics;
 use log::info;
 use tokio::net::TcpListener;
 use tokio::net::UnixListener;
+
 /// Starts a tcp server on the given address
 pub async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
     let listener = TcpListener::bind(&addr).await?;
@@ -20,6 +21,7 @@ pub async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
     }
 }
 
+/// Starts a unix server on the given path
 pub async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
     if std::path::Path::new(&path).exists() {
         std::fs::remove_file(path.clone())?;
