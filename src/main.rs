@@ -25,10 +25,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Commands::Server { server_type } => match server_type {
             ServerType::Tcp { host, port } => {
                 let addr = format!("{}:{}", host, port);
-                let _ = server::start_server(addr).await;
+                let result = server::start_tcp_server(addr).await;
+                info!("{:?}", result);
             }
             ServerType::Unix { path } => {
-                let _ = server::start_unix_server(path.clone()).await;
+                let result = server::start_unix_server(path.clone()).await;
+                info!("{:?}", result);
             }
         },
         Commands::Client {

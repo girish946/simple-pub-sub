@@ -1,13 +1,21 @@
 use log::{error, trace};
 use tokio::sync::broadcast::Sender;
 
+/// Packet Type Publish
 pub const PUBLISH: u8 = 0x02;
+/// Packet Type Subscribe
 pub const SUBSCRIBE: u8 = 0x03;
+/// Packet Type Unsubscribe
 pub const UNSUBSCRIBE: u8 = 0x04;
+/// Packet Type Query
 pub const QUERY: u8 = 0x05;
+//// Packet Type Publish Acknowledgement
 pub const PUBLISHACK: u8 = 0x0B;
+//// Packet Type Subscribe Acknowledgement
 pub const SUBSCRIBEACK: u8 = 0x0C;
+/// Packet Type Unsubscribe Acknowledgement
 pub const UNSUBSCRIBEACK: u8 = 0x0D;
+//// Packet Type Query Response
 pub const QUERYRESP: u8 = 0x0E;
 
 /// Packet type
@@ -46,6 +54,7 @@ impl PktType {
     }
 }
 impl ToString for PktType {
+    /// returns the string representation for the given packet type.
     fn to_string(&self) -> String {
         match self {
             PktType::PUBLISH => "PUBLISH".to_string(),
@@ -63,16 +72,25 @@ impl ToString for PktType {
 /// supported versions for the pub-sub header format/protocol.
 pub const SUPPORTED_VERSIONS: [[u8; 2]; 1] = [[0x00, 0x01]];
 
+/// default version for the pub-sub header format/protocol.
 pub const DEFAULT_VERSION: [u8; 2] = [0x00, 0x01];
 
+/// error types for the `Header`.
 #[derive(Debug, Clone)]
 pub enum HeaderError {
+    /// invalid header buffer length
     InvalidHeaderBufferLength,
+    /// invalid header value or padding
     InvalidHeadOrTail,
+    /// unsupported version of the packet
     UnsupportedVersion,
+    /// invalid message type
     InvalidMessageType,
+    /// invalid topic length
     InvalidTopicLength,
+    /// invalid message length
     InvalidMessageLength,
+    /// invalid request/response type
     InvalidResuestResponseType,
 }
 
@@ -110,6 +128,7 @@ pub struct Msg {
 }
 
 impl Msg {
+    /// Creates a new `Msg` with the given data.
     pub fn new(pkt_type: PktType, topic: String, message: Option<Vec<u8>>) -> Msg {
         let msg: Vec<u8> = match message {
             Some(m) => m,
@@ -130,6 +149,7 @@ impl Msg {
         self.channel = Some(chan);
     }
 
+    // returns the client id for the message.
     pub fn client_id(&mut self, client_id: String) {
         self.client_id = Some(client_id);
     }
@@ -164,6 +184,7 @@ impl Msg {
 }
 
 impl Header {
+    /// creates a new `Header` with the given data.
     pub fn new(pkt_type: PktType, topic_len: u8, message_len: u16) -> Header {
         Header {
             header: 0x0F,

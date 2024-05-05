@@ -4,7 +4,8 @@ use log::info;
 use tokio::net::TcpListener;
 use tokio::net::UnixListener;
 
-pub async fn start_server(addr: String) -> Result<(), tokio::io::Error> {
+/// Starts a tcp server on the given address
+pub async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on: {}", addr);
     info!("getting global broadcaster");
@@ -20,8 +21,12 @@ pub async fn start_server(addr: String) -> Result<(), tokio::io::Error> {
     }
 }
 
+/// Starts a unix server on the given path
 pub async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
-    std::fs::remove_file(path.clone())?;
+    if std::path::Path::new(&path).exists() {
+        std::fs::remove_file(path.clone())?;
+    }
+
     let listener = UnixListener::bind(&path)?;
     info!("Listening on: {}", path);
     info!("getting global broadcaster");

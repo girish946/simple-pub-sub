@@ -32,13 +32,13 @@ So it's a 8 byte header followed by the topic and message.
         simple-pub-sub client tcp 0.0.0.0 6480 subscribe the_topic --log-level trace
         ```
 
-        - publish:
+      - publish:
 
         ```bash
         simple-pub-sub client tcp 0.0.0.0 6480 publish the_topic the_message --log-level info
         ```
 
-        - query:
+      - query:
 
         ```bash
         simple-pub-sub client tcp 0.0.0.0 6480 query the_topic --log-level trace
@@ -49,13 +49,13 @@ So it's a 8 byte header followed by the topic and message.
         simple-pub-sub client unix /tmp/pubsub.sock subscribe the_topic --log-level trace
         ```
 
-        - publish:
+      - publish:
 
         ```bash
         simple-pub-sub client unix /tmp/pubsub.sock publish the_topic the_message --log-level info
         ```
 
-        - query:
+      - query:
 
         ```bash
         simple-pub-sub client unix /tmp/pubsub.sock query the_topic --log-level trace
@@ -90,7 +90,7 @@ async fn main() -> Result<(), String> {
 }
 ```
 
-To push a message
+To publish a message
 
 ```rust
 use simple_pub_sub;

@@ -35,6 +35,7 @@ pub enum ServerType {
     },
 }
 
+/// the main command
 #[derive(Parser)]
 #[clap(author, version, about, long_about = None)]
 pub struct Cli {
@@ -46,13 +47,18 @@ pub struct Cli {
     pub log_level: Option<LogLevel>,
 }
 
+/// the subcommands
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Server
     Server {
+        /// server type, tcp or unix
         #[clap(subcommand)]
         server_type: ServerType,
     },
+    /// Client
     Client {
+        /// server type, tcp or unix
         #[clap(subcommand)]
         server_tyepe: ServerType,
         /// client mode
