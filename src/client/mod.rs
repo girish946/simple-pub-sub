@@ -59,6 +59,7 @@ pub fn on_message(topic: String, message: Vec<u8>) {
 }
 
 impl Client {
+    /// Creates a new instance of `Client`
     pub fn new(client_type: PubSubClient) -> Client {
         Client {
             client_type,
@@ -67,10 +68,12 @@ impl Client {
         }
     }
 
+    /// Sets the on_message callback function
     pub fn on_message(&mut self, callback: Callback) {
         self.callback = Some(callback)
     }
 
+    /// Connects to the server
     pub async fn connect(&mut self) -> Result<(), tokio::io::Error> {
         match self.client_type.clone() {
             PubSubClient::Tcp(tcp_client) => {
@@ -87,6 +90,8 @@ impl Client {
         Ok(())
     }
 
+    /// Sends the message to the given server and returns the ack
+    /// the server could be either a tcp or unix server
     pub async fn post(self, msg: message::Msg) -> Result<Vec<u8>, tokio::io::Error> {
         match self.stream {
             Some(s) => {
@@ -140,6 +145,7 @@ impl Client {
         }
     }
 
+    /// Publishes the message to the given topic
     pub async fn publish(self, topic: String, message: Vec<u8>) -> Result<(), tokio::io::Error> {
         let msg: message::Msg = message::Msg::new(message::PktType::PUBLISH, topic, Some(message));
         trace!("msg: {:?}", msg);
@@ -161,6 +167,7 @@ impl Client {
         Ok(())
     }
 
+    /// Sends the query message to the server
     pub async fn query(self, topic: String) -> Result<String, tokio::io::Error> {
         let msg: message::Msg = message::Msg::new(
             message::PktType::QUERY,
@@ -213,6 +220,7 @@ impl Client {
         }
     }
 
+    /// subscribes to the given topic
     pub async fn subscribe(self, topic: String) -> Result<(), tokio::io::Error> {
         match self.stream {
             Some(s) => {
