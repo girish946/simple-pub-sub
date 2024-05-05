@@ -14,7 +14,7 @@ mod tests {
 
     #[tokio::test]
     async fn client_publish() {
-        std::env::set_var("RUST_LOG", "trace");
+        // std::env::set_var("RUST_LOG", "trace");
         env_logger::init();
 
         let _ = tokio::spawn(start_serever());
@@ -45,7 +45,7 @@ mod tests {
 
     #[tokio::test]
     async fn client_subscribe() {
-        std::env::set_var("RUST_LOG", "trace");
+        // std::env::set_var("RUST_LOG", "trace");
 
         let _ = tokio::spawn(start_serever());
         sleep(Duration::from_millis(1000)).await;
