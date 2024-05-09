@@ -1,4 +1,4 @@
-use simple_pub_sub;
+
 use tokio::time::{sleep, Duration};
 #[cfg(test)]
 mod tests {
@@ -40,7 +40,7 @@ mod tests {
         info!("{:?}", result);
 
         sleep(Duration::from_millis(1000)).await;
-        assert_eq!(true, result.is_ok());
+        assert!(result.is_ok());
     }
 
     #[tokio::test]

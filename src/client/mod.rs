@@ -114,7 +114,7 @@ impl Client {
                                 return Err(e);
                             }
                         };
-                        return Ok(buf);
+                        Ok(buf)
                     }
                     StreamType::Unix(mut unix_stream) => {
                         match unix_stream.write_all(&msg.bytes()).await {
@@ -134,9 +134,9 @@ impl Client {
                                 return Err(e);
                             }
                         };
-                        return Ok(buf);
+                        Ok(buf)
                     }
-                };
+                }
             }
             None => Err(tokio::io::Error::new(
                 tokio::io::ErrorKind::Other,

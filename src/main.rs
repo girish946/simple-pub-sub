@@ -52,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 });
             } else if socket == "tcp" {
                 let port = match port {
-                    Some(port) => port.clone(),
+                    Some(port) => *port,
                     None => 6480,
                 };
                 let addr = format!("{server}:{port}");

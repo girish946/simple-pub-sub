@@ -9,13 +9,13 @@ pub const SUBSCRIBE: u8 = 0x03;
 pub const UNSUBSCRIBE: u8 = 0x04;
 /// Packet Type Query
 pub const QUERY: u8 = 0x05;
-//// Packet Type Publish Acknowledgement
+/// Packet Type Publish Acknowledgement
 pub const PUBLISHACK: u8 = 0x0B;
-//// Packet Type Subscribe Acknowledgement
+/// Packet Type Subscribe Acknowledgement
 pub const SUBSCRIBEACK: u8 = 0x0C;
 /// Packet Type Unsubscribe Acknowledgement
 pub const UNSUBSCRIBEACK: u8 = 0x0D;
-//// Packet Type Query Response
+/// Packet Type Query Response
 pub const QUERYRESP: u8 = 0x0E;
 
 /// Packet type

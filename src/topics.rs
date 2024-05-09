@@ -54,7 +54,7 @@ impl TopicMap {
     }
     /// adds a topic to the map.
     pub fn add_topic(&mut self, topic: String) {
-        self.map.entry(topic).or_insert_with(ClientChannelMap::new);
+        self.map.entry(topic).or_default();
     }
 
     /// Publishes the message to the channels.

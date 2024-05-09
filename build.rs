@@ -12,7 +12,7 @@ fn main() -> Result<(), std::io::Error> {
 
     println!("target_dir: {:?}", target_dir);
 
-    let out_dir = std::path::PathBuf::from(target_dir);
+    let out_dir = target_dir;
 
     println!("out_dir: {:?}", out_dir);
 
@@ -26,7 +26,7 @@ fn main() -> Result<(), std::io::Error> {
             println!("file written");
         }
         Err(e) => {
-            println!("error writing file: {}", e.to_string());
+            println!("error writing file: {}", e);
         }
     };
 
