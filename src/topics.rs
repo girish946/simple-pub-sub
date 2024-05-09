@@ -1,7 +1,7 @@
 use crate::message::{self, Msg};
 use log::{error, info, trace};
 use serde_json::json;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use tokio;
 use tokio::sync::broadcast::Sender;
 
@@ -10,7 +10,7 @@ type ClientChannelMap = HashMap<String, Sender<Msg>>;
 /// The `TopicMap` struct is used to store the channels for a given topic.
 #[derive(Debug, Clone)]
 pub struct TopicMap {
-    pub map: HashMap<String, ClientChannelMap>,
+    pub map: BTreeMap<String, ClientChannelMap>,
 }
 impl TopicMap {
     /// Returns the number of connected clients for a given topic.
@@ -104,7 +104,7 @@ pub fn get_global_broadcaster() -> tokio::sync::broadcast::Sender<Msg> {
 /// Handles the incoming and out-going messages for each topic.
 pub async fn topic_manager(chan: Sender<Msg>) {
     let mut map: TopicMap = TopicMap {
-        map: HashMap::new(),
+        map: BTreeMap::new(),
     };
     let mut rx = chan.subscribe();
     loop {
