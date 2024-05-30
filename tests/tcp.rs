@@ -21,6 +21,8 @@ mod tests {
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
+            cert: None,
+            cert_password: None,
         };
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
@@ -51,10 +53,14 @@ mod tests {
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
+            cert: None,
+            cert_password: None,
         };
         let client_type_pub = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
+            cert: None,
+            cert_password: None,
         };
 
         // initialize the client.

@@ -3,6 +3,8 @@ async fn main() -> Result<(), String> {
     let client_type = simple_pub_sub::client::PubSubTcpClient {
         server: "localhost".to_string(),
         port: 6480,
+        cert: None,
+        cert_password: None,
     };
     // initialize the client.
     let mut client =

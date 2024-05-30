@@ -1,18 +1,24 @@
 use crate::message;
 use crate::stream;
 use log::{error, info, trace};
+use std::fs::File;
 use std::io::ErrorKind;
+use std::io::Read;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     net::UnixStream,
 };
+use tokio_native_tls::native_tls::{Certificate, TlsConnector};
+use tokio_native_tls::TlsStream;
 
 /// Simple pub sub Client for Tcp connection
 #[derive(Debug, Clone)]
 pub struct PubSubTcpClient {
     pub server: String,
     pub port: u16,
+    pub cert: Option<String>,
+    pub cert_password: Option<String>,
 }
 
 /// Simple pub sub Client for Unix connection
@@ -32,6 +38,7 @@ pub enum PubSubClient {
 #[derive(Debug)]
 pub enum StreamType {
     Tcp(TcpStream),
+    Tls(TlsStream<TcpStream>),
     Unix(UnixStream),
 }
 
@@ -73,13 +80,75 @@ impl Client {
         self.callback = Some(callback)
     }
 
+    async fn connect_tls(&mut self, url: String, cert: String) -> Result<(), tokio::io::Error> {
+        // Load CA certificate
+        let mut file = match File::open(cert) {
+            Ok(file) => file,
+            Err(e) => {
+                error!("unable to open the certificate file: {}", e);
+                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
+            }
+        };
+        let mut ca_cert = vec![];
+        match file.read_to_end(&mut ca_cert) {
+            Ok(size) => size,
+            Err(e) => {
+                error!("unable to read the CA file: {}", e);
+                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
+            }
+        };
+        let ca_cert = match Certificate::from_pem(&ca_cert) {
+            Ok(cert) => cert,
+            Err(e) => {
+                error!("unable to parse the CA certificate: {}", e);
+                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
+            }
+        };
+
+        // Configure TLS
+        let connector = match TlsConnector::builder()
+            .add_root_certificate(ca_cert)
+            .build()
+        {
+            Ok(connector) => connector,
+            Err(e) => {
+                error!("cannot create TLS connector: {}", e);
+                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
+            }
+        };
+
+        let connector = tokio_native_tls::TlsConnector::from(connector);
+
+        // Connect to the server
+        let stream = match TcpStream::connect(url).await {
+            Ok(stream) => stream,
+            Err(e) => {
+                error!("failed to connect to server: {}", e);
+                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
+            }
+        };
+
+        self.stream = match connector.connect("localhost", stream).await {
+            Ok(stream) => Some(StreamType::Tls(stream)),
+            Err(e) => {
+                error!("could not establish the tls connection: {}", e);
+                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
+            }
+        };
+        Ok(())
+    }
+
     /// Connects to the server
     pub async fn connect(&mut self) -> Result<(), tokio::io::Error> {
         match self.client_type.clone() {
             PubSubClient::Tcp(tcp_client) => {
                 let server_url: String = format!("{}:{}", tcp_client.server, tcp_client.port);
-                let stream = TcpStream::connect(server_url).await?;
-                self.stream = Some(StreamType::Tcp(stream));
+                if let Some(cert) = tcp_client.cert {
+                    self.connect_tls(server_url, cert).await?;
+                } else {
+                    let stream = TcpStream::connect(server_url).await?;
+                    self.stream = Some(StreamType::Tcp(stream));
+                }
             }
             PubSubClient::Unix(unix_stream) => {
                 let path = unix_stream.path;
@@ -94,50 +163,68 @@ impl Client {
     /// the server could be either a tcp or unix server
     pub async fn post(self, msg: message::Msg) -> Result<Vec<u8>, tokio::io::Error> {
         match self.stream {
-            Some(s) => {
-                match s {
-                    StreamType::Tcp(mut tcp_stream) => {
-                        match tcp_stream.write_all(&msg.bytes()).await {
-                            Ok(_) => {}
-                            Err(e) => {
-                                error!("could not send the data to the server: {}", e.to_string());
-                                return Err(e);
-                            }
+            Some(s) => match s {
+                StreamType::Tls(mut tls_stream) => {
+                    match tls_stream.write_all(&msg.bytes()).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("could not send the data to the server: {}", e.to_string());
+                            return Err(e);
                         }
-                        let mut buf: Vec<u8>;
-                        buf = vec![0; 8];
-                        trace!("reading the ack:");
-                        let _ = match tcp_stream.read(&mut buf).await {
-                            Ok(n) => n,
-                            Err(e) => {
-                                error!("could not retrive ack for published packet");
-                                return Err(e);
-                            }
-                        };
-                        Ok(buf)
                     }
-                    StreamType::Unix(mut unix_stream) => {
-                        match unix_stream.write_all(&msg.bytes()).await {
-                            Ok(_) => {}
-                            Err(e) => {
-                                error!("could not send the data to the server: {}", e.to_string());
-                                return Err(e);
-                            }
+                    let mut buf: Vec<u8>;
+                    buf = vec![0; 8];
+                    trace!("reading the ack:");
+                    let _ = match tls_stream.read(&mut buf).await {
+                        Ok(n) => n,
+                        Err(e) => {
+                            error!("could not retrieve ack for published packet");
+                            return Err(e);
                         }
-                        let mut buf: Vec<u8>;
-                        buf = vec![0; 8];
-                        trace!("reading the ack:");
-                        let _ = match unix_stream.read(&mut buf).await {
-                            Ok(n) => n,
-                            Err(e) => {
-                                error!("could not retrive ack for published packet");
-                                return Err(e);
-                            }
-                        };
-                        Ok(buf)
-                    }
+                    };
+                    Ok(buf)
                 }
-            }
+                StreamType::Tcp(mut tcp_stream) => {
+                    match tcp_stream.write_all(&msg.bytes()).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("could not send the data to the server: {}", e.to_string());
+                            return Err(e);
+                        }
+                    }
+                    let mut buf: Vec<u8>;
+                    buf = vec![0; 8];
+                    trace!("reading the ack:");
+                    let _ = match tcp_stream.read(&mut buf).await {
+                        Ok(n) => n,
+                        Err(e) => {
+                            error!("could not retrieve ack for published packet");
+                            return Err(e);
+                        }
+                    };
+                    Ok(buf)
+                }
+                StreamType::Unix(mut unix_stream) => {
+                    match unix_stream.write_all(&msg.bytes()).await {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("could not send the data to the server: {}", e.to_string());
+                            return Err(e);
+                        }
+                    }
+                    let mut buf: Vec<u8>;
+                    buf = vec![0; 8];
+                    trace!("reading the ack:");
+                    let _ = match unix_stream.read(&mut buf).await {
+                        Ok(n) => n,
+                        Err(e) => {
+                            error!("could not retrieve ack for published packet");
+                            return Err(e);
+                        }
+                    };
+                    Ok(buf)
+                }
+            },
             None => Err(tokio::io::Error::new(
                 tokio::io::ErrorKind::Other,
                 "client not connected yet.",
@@ -178,6 +265,22 @@ impl Client {
 
         match self.stream {
             Some(s) => match s {
+                StreamType::Tls(mut tls_stream) => match tls_stream.write_all(&msg.bytes()).await {
+                    Ok(_) => match stream::read_message(&mut tls_stream).await {
+                        Ok(msg) => match String::from_utf8(msg.message.clone()) {
+                            Ok(msg_str) => Ok(msg_str),
+                            Err(e) => Err(tokio::io::Error::new(
+                                tokio::io::ErrorKind::Other,
+                                e.to_string(),
+                            )),
+                        },
+                        Err(e) => Err(e),
+                    },
+                    Err(e) => Err(tokio::io::Error::new(
+                        tokio::io::ErrorKind::Other,
+                        e.to_string(),
+                    )),
+                },
                 StreamType::Tcp(mut tcp_stream) => match tcp_stream.write_all(&msg.bytes()).await {
                     Ok(_) => match stream::read_message(&mut tcp_stream).await {
                         Ok(msg) => match String::from_utf8(msg.message.clone()) {
@@ -228,6 +331,33 @@ impl Client {
                 trace!("msg: {:?}", msg);
 
                 match s {
+                    StreamType::Tls(mut tls_stream) => {
+                        match tls_stream.write_all(&msg.bytes()).await {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("could not send the data to the server: {}", e.to_string());
+                                return Err(tokio::io::Error::new(
+                                    tokio::io::ErrorKind::Other,
+                                    e.to_string(),
+                                ));
+                            }
+                        };
+                        loop {
+                            match stream::read_message(&mut tls_stream).await {
+                                Ok(m) => match self.callback {
+                                    Some(fn_) => {
+                                        fn_(m.topic, m.message);
+                                    }
+                                    None => on_message(m.topic, m.message),
+                                },
+                                Err(e) => {
+                                    error!("could not read message: {}", e.to_string());
+                                    break;
+                                }
+                            };
+                        }
+                    }
+
                     StreamType::Tcp(mut tcp_stream) => {
                         match tcp_stream.write_all(&msg.bytes()).await {
                             Ok(_) => {}
