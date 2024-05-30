@@ -17,7 +17,7 @@ pub async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
     loop {
         let (socket, addr) = listener.accept().await?;
         info!("addr is: {addr}");
-        client_handler::handle_clinet(socket, tx.clone()).await;
+        client_handler::handle_client(socket, tx.clone()).await;
     }
 }
 
@@ -35,6 +35,6 @@ pub async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
     loop {
         let (socket, addr) = listener.accept().await?;
         info!("addr is: {:?}", addr.as_pathname());
-        client_handler::handle_clinet(socket, tx.clone()).await;
+        client_handler::handle_client(socket, tx.clone()).await;
     }
 }

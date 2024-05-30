@@ -13,8 +13,8 @@ pub async fn read_channel_msg(
     rx.recv().await
 }
 
-/// Handels the communication between a client and the broker.
-pub async fn handle_clinet<S>(mut socket: S, chan: Sender<message::Msg>)
+/// Handles the communication between a client and the broker.
+pub async fn handle_client<S>(mut socket: S, chan: Sender<message::Msg>)
 where
     S: AsyncWriteExt
         + Unpin
