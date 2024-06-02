@@ -16,7 +16,17 @@ pub async fn start_tls_server(
     cert_password: Option<String>,
 ) -> Result<(), tokio::io::Error> {
     // Load TLS identity (certificate and private key)
-    let mut file = File::open(cert).expect("cannot open identity file");
+
+    let mut file = match File::open(&cert) {
+        Ok(file) => file,
+        Err(e) => {
+            error!("could not open identity file: {}: {}", cert, e);
+            return Err(tokio::io::Error::new(
+                tokio::io::ErrorKind::Other,
+                "could not open identity file",
+            ));
+        }
+    };
     let mut identity_vec = vec![];
     file.read_to_end(&mut identity_vec)?;
 
@@ -58,10 +68,13 @@ pub async fn start_tls_server(
         let (stream, addr) = listener.accept().await?;
         println!("Accepted connection from {:?}", addr);
         let acceptor = acceptor.clone();
-        let tls_stream = acceptor
-            .accept(stream)
-            .await
-            .expect("failed to accept TLS connection");
+        let tls_stream = match acceptor.accept(stream).await {
+            Ok(stream) => stream,
+            Err(e) => {
+                error!("could not accept TLS connection: {}", e);
+                continue;
+            }
+        };
         client_handler::handle_client(tls_stream, tx.clone()).await;
     }
 }

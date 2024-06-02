@@ -15,7 +15,7 @@ where
         Ok(n) => n,
         Err(e) => {
             warn!(
-                "error occured while reading from the socket: {}",
+                "error occurred while reading from the socket: {}",
                 e.to_string()
             );
             return Err(tokio::io::Error::new(
@@ -56,7 +56,7 @@ where
 
     if 504 - u16::from(header.topic_length) < header.message_length {
         let bytes_remaining = header.message_length - (504 - u16::from(header.topic_length));
-        trace!("the message is bigger, reading the remainig chunk");
+        trace!("the message is bigger, reading the remaining chunk");
         trace!("{} bytes remaining", bytes_remaining);
 
         let mut buf: Vec<u8> = Vec::with_capacity(bytes_remaining.into());

@@ -160,7 +160,7 @@ impl Msg {
             Ok(h) => h,
             Err(e) => {
                 error!("unable to generate the response header: {:?}", e);
-                return Err("unable to genreate response header".to_string());
+                return Err("unable to generate response header".to_string());
             }
         };
         header.message_length = _message.len() as u16;
@@ -317,7 +317,10 @@ pub fn get_msg_response(msg: Msg) -> Result<Vec<u8>, String> {
     let mut resp: Vec<u8> = match msg.response_msg(msg.message.clone()) {
         Ok(m) => m.header.bytes(),
         Err(e) => {
-            error!("error occured while generating the response message: {}", e);
+            error!(
+                "error occurred while generating the response message: {}",
+                e
+            );
             return Err(e);
         }
     };
