@@ -166,7 +166,30 @@ impl Client {
         let mut buf: Vec<u8>;
         buf = vec![0; 8];
         match self.read(&mut buf).await {
-            Ok(()) => Ok(buf),
+            Ok(()) => {
+                trace!("buf: {:?}", buf);
+                match message::Header::from_vec(buf.clone()) {
+                    Ok(resp) => {
+                        trace!("resp: {:?}", resp);
+                        // read the remaining message
+                        let mut buf_buf = Vec::with_capacity(resp.message_length as usize);
+                        trace!("reading remaining bytes");
+                        match self.read_buf(&mut buf_buf).await {
+                            Ok(()) => {
+                                buf.extend(buf_buf);
+                            }
+                            Err(e) => {
+                                return Err(e);
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        return Err(tokio::io::Error::new(ErrorKind::Other, format!("{:?}", e)));
+                    }
+                };
+
+                Ok(buf)
+            }
             Err(e) => Err(e),
         }
     }
@@ -295,6 +318,31 @@ impl Client {
                     Ok(_) => Ok(()),
                     Err(e) => Err(e),
                 },
+            }
+        } else {
+            Err(tokio::io::Error::new(
+                tokio::io::ErrorKind::Other,
+                "client not connected yet.".to_string(),
+            ))
+        }
+    }
+    pub async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<(), tokio::io::Error> {
+        if let Some(stream) = &mut self.stream {
+            match stream {
+                StreamType::Tls(ref mut tls_stream) => match tls_stream.read_buf(message).await {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e),
+                },
+                StreamType::Tcp(ref mut tcp_stream) => match tcp_stream.read_buf(message).await {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(e),
+                },
+                StreamType::Unix(ref mut unix_stream) => {
+                    match unix_stream.read_buf(message).await {
+                        Ok(_) => Ok(()),
+                        Err(e) => Err(e),
+                    }
+                }
             }
         } else {
             Err(tokio::io::Error::new(
