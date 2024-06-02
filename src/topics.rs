@@ -73,11 +73,11 @@ impl TopicMap {
                         Ok(_n) => "".to_string(),
                         Err(e) => {
                             error!(
-                                "error occured: {} while sending the message to the channel {}",
+                                "error occurred: {} while sending the message to the channel {}",
                                 e.to_string(),
                                 client_id
                             );
-                            error!("cleaing up");
+                            error!("cleaning up");
                             client_id.clone()
                         }
                     }
@@ -160,7 +160,10 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                 }
             }
             Err(e) => {
-                error!("error occured while receving the topic: {}", e.to_string());
+                error!(
+                    "error occurred while receiving the topic: {}",
+                    e.to_string()
+                );
                 // "".to_string()
             }
         };

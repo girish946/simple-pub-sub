@@ -1,4 +1,43 @@
 use tokio::time::{sleep, Duration};
+async fn create_tls_certs() {
+    use std::process::Command;
+    // openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+    // openssl pkcs12 -export -out identity.pfx -inkey key.pem -in cert.pem -passout pass:password
+
+    let cert_gen_op = Command::new("openssl")
+        .args([
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:4096",
+            "-keyout",
+            "certs/key.pem",
+            "-out",
+            "certs/cert.pem",
+            "-days",
+            "365",
+            "-nodes",
+            "-subj",
+            "/CN=localhost",
+        ])
+        .output();
+    println!("certs created: {:?}", cert_gen_op);
+    let op = Command::new("openssl")
+        .args([
+            "pkcs12",
+            "-export",
+            "-out",
+            "certs/identity.pfx",
+            "-inkey",
+            "certs/key.pem",
+            "-in",
+            "certs/cert.pem",
+            "-passout",
+            "pass:password",
+        ])
+        .output();
+    println!("identity file created: {:?}", op);
+}
 #[cfg(test)]
 mod tests {
 
@@ -6,23 +45,29 @@ mod tests {
     use log::info;
 
     async fn start_serever() {
-        let addr = "localhost:6480".to_string();
+        let host = "0.0.0.0".to_string();
+        let port = 6480;
+        let cert = "certs/identity.pfx".to_string();
+        let password = "password".to_string();
+
         println!("server started");
-        let _ = simple_pub_sub::server::start_tcp_server(addr).await;
+        let _ = simple_pub_sub::server::start_tls_server(host, port, cert, Some(password)).await;
     }
 
     #[tokio::test]
-    async fn client_publish() {
+    async fn tls_client_publish() {
         // std::env::set_var("RUST_LOG", "trace");
         env_logger::init();
+        create_tls_certs().await;
+        sleep(Duration::from_millis(5000)).await;
 
         let _ = tokio::spawn(start_serever());
         sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
-            cert: None,
-            cert_password: None,
+            cert: Some("certs/cert.pem".to_string()),
+            cert_password: Some("password".to_string()),
         };
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
@@ -43,9 +88,8 @@ mod tests {
         sleep(Duration::from_millis(1000)).await;
         assert!(result.is_ok());
     }
-
     #[tokio::test]
-    async fn client_subscribe() {
+    async fn tls_client_subscribe() {
         // std::env::set_var("RUST_LOG", "trace");
 
         let _ = tokio::spawn(start_serever());
@@ -53,14 +97,14 @@ mod tests {
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
-            cert: None,
-            cert_password: None,
+            cert: Some("certs/cert.pem".to_string()),
+            cert_password: Some("password".to_string()),
         };
         let client_type_pub = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
-            cert: None,
-            cert_password: None,
+            cert: Some("certs/cert.pem".to_string()),
+            cert_password: Some("password".to_string()),
         };
 
         // initialize the client.
