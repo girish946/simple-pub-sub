@@ -8,7 +8,7 @@ pub enum ClientType {
     Query,
 }
 
-/// log leve for the client/server
+/// log level for the client/server
 #[derive(clap::ValueEnum, Clone)]
 pub enum LogLevel {
     Trace,
@@ -27,6 +27,14 @@ pub enum ServerType {
         host: String,
         /// port
         port: u16,
+
+        /// tls certificate
+        #[clap(short, long)]
+        cert: Option<String>,
+
+        /// tls certificate password
+        #[clap(short = 'p', long)]
+        cert_password: Option<String>,
     },
     /// unix server
     Unix {

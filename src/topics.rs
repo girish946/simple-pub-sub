@@ -1,7 +1,7 @@
 use crate::message::{self, Msg};
 use log::{error, info, trace};
 use serde_json::json;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use tokio;
 use tokio::sync::broadcast::Sender;
 
@@ -10,7 +10,7 @@ type ClientChannelMap = HashMap<String, Sender<Msg>>;
 /// The `TopicMap` struct is used to store the channels for a given topic.
 #[derive(Debug, Clone)]
 pub struct TopicMap {
-    pub map: HashMap<String, ClientChannelMap>,
+    pub map: BTreeMap<String, ClientChannelMap>,
 }
 impl TopicMap {
     /// Returns the number of connected clients for a given topic.
@@ -54,7 +54,7 @@ impl TopicMap {
     }
     /// adds a topic to the map.
     pub fn add_topic(&mut self, topic: String) {
-        self.map.entry(topic).or_insert_with(ClientChannelMap::new);
+        self.map.entry(topic).or_default();
     }
 
     /// Publishes the message to the channels.
@@ -73,11 +73,11 @@ impl TopicMap {
                         Ok(_n) => "".to_string(),
                         Err(e) => {
                             error!(
-                                "error occured: {} while sending the message to the channel {}",
+                                "error occurred: {} while sending the message to the channel {}",
                                 e.to_string(),
                                 client_id
                             );
-                            error!("cleaing up");
+                            error!("cleaning up");
                             client_id.clone()
                         }
                     }
@@ -104,7 +104,7 @@ pub fn get_global_broadcaster() -> tokio::sync::broadcast::Sender<Msg> {
 /// Handles the incoming and out-going messages for each topic.
 pub async fn topic_manager(chan: Sender<Msg>) {
     let mut map: TopicMap = TopicMap {
-        map: HashMap::new(),
+        map: BTreeMap::new(),
     };
     let mut rx = chan.subscribe();
     loop {
@@ -160,7 +160,10 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                 }
             }
             Err(e) => {
-                error!("error occured while receving the topic: {}", e.to_string());
+                error!(
+                    "error occurred while receiving the topic: {}",
+                    e.to_string()
+                );
                 // "".to_string()
             }
         };

@@ -23,10 +23,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     match &cli.command {
         Commands::Server { server_type } => match server_type {
-            ServerType::Tcp { host, port } => {
+            ServerType::Tcp {
+                host,
+                port,
+                cert,
+                cert_password,
+            } => {
                 let addr = format!("{}:{}", host, port);
-                let result = server::start_tcp_server(addr).await;
-                info!("{:?}", result);
+                if let Some(cert) = cert {
+                    let result = server::start_tls_server(
+                        host.to_string(),
+                        *port,
+                        cert.to_string(),
+                        cert_password.clone(),
+                    )
+                    .await;
+
+                    info!("{:?}", result);
+                } else {
+                    let result = server::start_tcp_server(addr).await;
+                    info!("{:?}", result);
+                }
             }
             ServerType::Unix { path } => {
                 let result = server::start_unix_server(path.clone()).await;
@@ -39,9 +56,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
             message,
             server_tyepe,
         } => {
-            let (server, port, socket): (&String, Option<&u16>, String) = match server_tyepe {
-                ServerType::Tcp { host, port } => (host, Some(port), "tcp".to_string()),
-                ServerType::Unix { path } => (path, Some(&0), "unix".to_string()),
+            let (server, port, socket, cert, cert_password): (
+                &String,
+                Option<&u16>,
+                String,
+                Option<String>,
+                Option<String>,
+            ) = match server_tyepe {
+                ServerType::Tcp {
+                    host,
+                    port,
+                    cert,
+                    cert_password,
+                } => (
+                    host,
+                    Some(port),
+                    "tcp".to_string(),
+                    cert.clone(),
+                    cert_password.clone(),
+                ),
+                ServerType::Unix { path } => (path, Some(&0), "unix".to_string(), None, None),
             };
 
             let client_: client::PubSubClient;
@@ -52,7 +86,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 });
             } else if socket == "tcp" {
                 let port = match port {
-                    Some(port) => port.clone(),
+                    Some(port) => *port,
                     None => 6480,
                 };
                 let addr = format!("{server}:{port}");
@@ -60,6 +94,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 client_ = client::PubSubClient::Tcp(client::PubSubTcpClient {
                     server: server.clone(),
                     port,
+                    cert,
+                    cert_password,
                 });
             } else {
                 return Err("socket type not supported".into());
