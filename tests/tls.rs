@@ -92,6 +92,9 @@ mod tests {
     async fn tls_client_subscribe() {
         // std::env::set_var("RUST_LOG", "trace");
 
+        create_tls_certs().await;
+        sleep(Duration::from_millis(5000)).await;
+
         let _ = tokio::spawn(start_serever());
         sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
