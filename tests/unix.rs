@@ -6,8 +6,7 @@ mod tests {
     use log::info;
     use simple_pub_sub::server::ServerTrait as _;
 
-    async fn start_serever() {
-        let addr = "/tmp/simple.sock".to_string();
+    async fn start_serever(addr: String) {
         println!("server started");
         let server = simple_pub_sub::server::ServerType::Unix(simple_pub_sub::server::Unix {
             path: addr.clone(),
@@ -22,11 +21,11 @@ mod tests {
         // std::env::set_var("RUST_LOG", "trace");
         env_logger::init();
 
-        let server = tokio::spawn(start_serever());
+        let path = "/tmp/sample2.sock".to_string();
+
+        let server = tokio::spawn(start_serever(path.clone()));
         sleep(Duration::from_millis(1000)).await;
-        let client_type = simple_pub_sub::client::PubSubUnixClient {
-            path: "/tmp/simple.sock".to_string(),
-        };
+        let client_type = simple_pub_sub::client::PubSubUnixClient { path };
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Unix(client_type),
@@ -50,15 +49,12 @@ mod tests {
     #[tokio::test]
     async fn client_subscribe() {
         // std::env::set_var("RUST_LOG", "trace");
+        let path = "/tmp/sock1.sock".to_string();
 
-        let server = tokio::spawn(start_serever());
+        let server = tokio::spawn(start_serever(path.clone()));
         sleep(Duration::from_millis(1000)).await;
-        let client_type = simple_pub_sub::client::PubSubUnixClient {
-            path: "/tmp/simple.sock".to_string(),
-        };
-        let client_type_pub = simple_pub_sub::client::PubSubUnixClient {
-            path: "/tmp/simple.sock".to_string(),
-        };
+        let client_type = simple_pub_sub::client::PubSubUnixClient { path: path.clone() };
+        let client_type_pub = simple_pub_sub::client::PubSubUnixClient { path };
         // initialize the client.
         let mut client_sub = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Unix(client_type),
