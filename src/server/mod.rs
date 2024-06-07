@@ -8,8 +8,73 @@ use tokio::net::TcpListener;
 use tokio::net::UnixListener;
 use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
 
+pub trait ServerTrait {
+    fn start(&self) -> impl std::future::Future<Output = Result<(), tokio::io::Error>> + Send;
+}
+pub struct Tcp {
+    pub host: String,
+    pub port: u16,
+    pub cert: Option<String>,
+    pub cert_password: Option<String>,
+}
+
+impl ServerTrait for Tcp {
+    async fn start(&self) -> Result<(), tokio::io::Error> {
+        if let Some(cert) = &self.cert {
+            start_tls_server(
+                self.host.clone(),
+                self.port,
+                cert.clone(),
+                self.cert_password.clone(),
+            )
+            .await
+        } else {
+            start_tcp_server(format!("{}:{}", self.host, self.port)).await
+        }
+    }
+}
+pub struct Unix {
+    pub path: String,
+}
+
+impl ServerTrait for Unix {
+    async fn start(&self) -> Result<(), tokio::io::Error> {
+        start_unix_server(self.path.clone()).await
+    }
+}
+impl Drop for Unix {
+    fn drop(&mut self) {
+        if std::path::Path::new(&self.path).exists() {
+            std::fs::remove_file(&self.path).unwrap();
+        }
+    }
+}
+
+pub enum ServerType {
+    Tcp(Tcp),
+    Unix(Unix),
+}
+impl ServerTrait for ServerType {
+    async fn start(&self) -> Result<(), tokio::io::Error> {
+        match self {
+            ServerType::Tcp(tcp) => tcp.start().await,
+            ServerType::Unix(unix) => unix.start().await,
+        }
+    }
+}
+
+pub struct Server {
+    pub server_type: ServerType,
+}
+
+impl Server {
+    pub async fn start(&self) -> Result<(), tokio::io::Error> {
+        self.server_type.start().await
+    }
+}
+
 /// Started a tls server on the given address with the given certificate (.pfx file)
-pub async fn start_tls_server(
+async fn start_tls_server(
     host: String,
     port: u16,
     cert: String,
@@ -80,7 +145,7 @@ pub async fn start_tls_server(
 }
 
 /// Starts a tcp server on the given address
-pub async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
+async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on: {}", addr);
     info!("getting global broadcaster");
@@ -97,7 +162,7 @@ pub async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
 }
 
 /// Starts a unix server on the given path
-pub async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
+async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
     if std::path::Path::new(&path).exists() {
         std::fs::remove_file(path.clone())?;
     }
