@@ -69,7 +69,7 @@ mod tests {
         create_tls_certs().await;
         sleep(Duration::from_millis(5000)).await;
 
-        let _ = tokio::spawn(start_serever());
+        let server = tokio::spawn(start_serever());
         sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
@@ -95,6 +95,7 @@ mod tests {
 
         sleep(Duration::from_millis(1000)).await;
         assert!(result.is_ok());
+        std::mem::drop(server);
     }
     #[tokio::test]
     async fn tls_client_subscribe() {
@@ -103,7 +104,7 @@ mod tests {
         create_tls_certs().await;
         sleep(Duration::from_millis(5000)).await;
 
-        let _ = tokio::spawn(start_serever());
+        let server = tokio::spawn(start_serever());
         sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
@@ -138,7 +139,7 @@ mod tests {
         // connect the client.
         let _ = client_sub.connect().await;
         // subscribe to the given topic.
-        let _ = client_sub.subscribe("abc".to_string());
+        let subscribe_client = client_sub.subscribe("abc".to_string());
         let _ = client_pub
             .publish(
                 "abc".to_string(),
@@ -147,5 +148,7 @@ mod tests {
             .await;
 
         sleep(Duration::from_millis(1000)).await;
+        std::mem::drop(server);
+        std::mem::drop(subscribe_client);
     }
 }
