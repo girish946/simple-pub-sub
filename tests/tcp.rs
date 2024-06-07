@@ -4,11 +4,17 @@ mod tests {
 
     use super::*;
     use log::info;
+    use simple_pub_sub::server::ServerTrait as _;
 
     async fn start_serever() {
-        let addr = "localhost:6480".to_string();
         println!("server started");
-        let _ = simple_pub_sub::server::start_tcp_server(addr).await;
+        let server = simple_pub_sub::server::ServerType::Tcp(simple_pub_sub::server::Tcp {
+            host: "localhost".to_string(),
+            port: 6480,
+            cert: None,
+            cert_password: None,
+        });
+        let _ = server.start().await;
     }
 
     #[tokio::test]

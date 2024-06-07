@@ -1,15 +1,19 @@
-
 use tokio::time::{sleep, Duration};
 #[cfg(test)]
 mod tests {
 
     use super::*;
     use log::info;
+    use simple_pub_sub::server::ServerTrait as _;
 
     async fn start_serever() {
         let addr = "/tmp/simple.sock".to_string();
         println!("server started");
-        let result = simple_pub_sub::server::start_unix_server(addr).await;
+        let server = simple_pub_sub::server::ServerType::Unix(simple_pub_sub::server::Unix {
+            path: addr.clone(),
+        });
+        let result = server.start().await;
+
         info!("{:?}", result);
     }
 

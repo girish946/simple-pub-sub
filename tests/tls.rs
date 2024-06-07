@@ -46,12 +46,20 @@ mod tests {
 
     async fn start_serever() {
         let host = "0.0.0.0".to_string();
-        let port = 6480;
+        let port = 6481;
         let cert = "certs/identity.pfx".to_string();
         let password = "password".to_string();
 
         println!("server started");
-        let _ = simple_pub_sub::server::start_tls_server(host, port, cert, Some(password)).await;
+        let server = simple_pub_sub::server::Server {
+            server_type: simple_pub_sub::server::ServerType::Tcp(simple_pub_sub::server::Tcp {
+                host: host.clone(),
+                port,
+                cert: Some(cert.clone()),
+                cert_password: Some(password.clone()),
+            }),
+        };
+        let _ = server.start().await;
     }
 
     #[tokio::test]
@@ -65,7 +73,7 @@ mod tests {
         sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
-            port: 6480,
+            port: 6481,
             cert: Some("certs/cert.pem".to_string()),
             cert_password: Some("password".to_string()),
         };
@@ -99,13 +107,13 @@ mod tests {
         sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
-            port: 6480,
+            port: 6481,
             cert: Some("certs/cert.pem".to_string()),
             cert_password: Some("password".to_string()),
         };
         let client_type_pub = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
-            port: 6480,
+            port: 6481,
             cert: Some("certs/cert.pem".to_string()),
             cert_password: Some("password".to_string()),
         };
