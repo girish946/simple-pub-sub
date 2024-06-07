@@ -24,15 +24,18 @@ So it's a 8 byte header followed by the topic and message.
 
     ```bash
     # Generate the server key and certificate
-    openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+    openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem \
+        -days 365 -nodes -subj "/CN=localhost"
     # generate the identity file.
-    openssl pkcs12 -export -out identity.pfx -inkey key.pem -in cert.pem -passout pass:password
+    openssl pkcs12 -export -out identity.pfx -inkey key.pem -in cert.pem\
+      -passout pass:password
     ```
 
     Start the server using these keys:
 
     ```bash
-    simple-pub-sub server tcp -c identity.pfx -p password 0.0.0.0 6480  --log-level trace
+    simple-pub-sub server tcp -c identity.pfx -p password 0.0.0.0 6480 \
+      --log-level trace
     ```
 
   - Using Unix socket:
@@ -52,19 +55,22 @@ So it's a 8 byte header followed by the topic and message.
         Using TLS:
 
         ```bash
-        simple-pub-sub client subscribe the_topic tcp -c certs/cert.pem 0.0.0.0 6480 --log-level trace
+        simple-pub-sub client subscribe the_topic tcp -c certs/cert.pem 0.0.0.0 6480\
+            --log-level trace
         ```
 
     - publish:
 
         ```bash
-        simple-pub-sub client publish the_topic the_message tcp 0.0.0.0 6480 --log-level info
+        simple-pub-sub client publish the_topic the_message tcp 0.0.0.0 6480\
+            --log-level info
         ```
 
         Using TLS:
 
         ```bash
-        simple-pub-sub client publish the_topic the_message tcp -c certs/cert.pem 0.0.0.0 6480 --log-level trace
+        simple-pub-sub client publish the_topic the_message tcp -c certs/cert.pem\
+         0.0.0.0 6480 --log-level trace
         ```
 
     - query:
@@ -76,20 +82,23 @@ So it's a 8 byte header followed by the topic and message.
         Using TLS:
 
         ```bash
-        simple-pub-sub client query the_topic tcp -c certs/cert.pem 0.0.0.0 6480  --log-level trace
+        simple-pub-sub client query the_topic tcp -c certs/cert.pem\
+          0.0.0.0 6480  --log-level trace
         ```
 
   - Using Unix socket:
     - subscribe:
 
         ```bash
-        simple-pub-sub client unix /tmp/pubsub.sock subscribe the_topic --log-level trace
+        simple-pub-sub client unix /tmp/pubsub.sock subscribe the_topic\
+          --log-level trace
         ```
 
     - publish:
 
         ```bash
-        simple-pub-sub client unix /tmp/pubsub.sock publish the_topic the_message --log-level info
+        simple-pub-sub client unix /tmp/pubsub.sock publish the_topic the_message\
+          --log-level info
         ```
 
     - query:

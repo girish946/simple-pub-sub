@@ -2,6 +2,7 @@ pub mod cli;
 use crate::cli::{Cli, ClientType, Commands, LogLevel, ServerType};
 use clap::Parser;
 use log::{error, info};
+use simple_pub_sub::server::ServerTrait as _;
 use simple_pub_sub::{client, server};
 use std::env;
 use std::error::Error;
@@ -29,24 +30,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 cert,
                 cert_password,
             } => {
-                let addr = format!("{}:{}", host, port);
-                if let Some(cert) = cert {
-                    let result = server::start_tls_server(
-                        host.to_string(),
-                        *port,
-                        cert.to_string(),
-                        cert_password.clone(),
-                    )
-                    .await;
-
-                    info!("{:?}", result);
-                } else {
-                    let result = server::start_tcp_server(addr).await;
-                    info!("{:?}", result);
-                }
+                let server = server::Tcp {
+                    host: host.to_string(),
+                    port: *port,
+                    cert: cert.clone(),
+                    cert_password: cert_password.clone(),
+                };
+                let result = server.start().await;
+                info!("{:?}", result);
             }
             ServerType::Unix { path } => {
-                let result = server::start_unix_server(path.clone()).await;
+                let result = server::Unix { path: path.clone() }.start().await;
                 info!("{:?}", result);
             }
         },
