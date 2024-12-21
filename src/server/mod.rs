@@ -124,14 +124,14 @@ async fn start_tls_server(
         .await
         .expect("cannot bind to address");
 
-    println!("Server listening on port 4433");
+    info!("Server listening on port 4433");
     let tx = topics::get_global_broadcaster();
 
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
 
     loop {
         let (stream, addr) = listener.accept().await?;
-        println!("Accepted connection from {:?}", addr);
+        info!("Accepted connection from {:?}", addr);
         let acceptor = acceptor.clone();
         let tls_stream = match acceptor.accept(stream).await {
             Ok(stream) => stream,

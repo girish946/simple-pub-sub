@@ -118,16 +118,20 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                             map.publish(msg).await;
                         }
                         message::PktType::SUBSCRIBE => {
-                            map.add_channel(
-                                msg.topic,
-                                msg.client_id.unwrap(),
-                                msg.channel.unwrap(),
-                            );
-                            trace!("map: {:?}", map);
+                            if msg.client_id.is_some() || msg.channel.is_some() {
+                                map.add_channel(
+                                    msg.topic,
+                                    msg.client_id.unwrap(),
+                                    msg.channel.unwrap(),
+                                );
+                                trace!("map: {:?}", map);
+                            }
                         }
                         message::PktType::UNSUBSCRIBE => {
-                            info!("unsubscribing:");
-                            map.remove_channel(msg.topic, msg.client_id.unwrap());
+                            if msg.client_id.is_some() {
+                                info!("unsubscribing:");
+                                map.remove_channel(msg.topic, msg.client_id.unwrap());
+                            }
                         }
                         message::PktType::QUERY => {
                             info!("querying");
