@@ -96,8 +96,17 @@ impl TopicMap {
 
 /// returns a global broadcaster.
 pub fn get_global_broadcaster() -> tokio::sync::broadcast::Sender<Msg> {
-    info!("creating broadcast channel");
-    let (glob_tx, _) = tokio::sync::broadcast::channel(1024);
+    let channel_capacity_str = std::env::var("PUB_SUB_CAP").unwrap_or("1024".to_string());
+    let channel_capacity = channel_capacity_str.parse::<u16>().unwrap_or_else(|x| {
+        error!("invalid channel channel_capacity: {}", x);
+        error!("using the default value 1024");
+        1024
+    });
+    info!(
+        "creating broadcast channel with capacity: {}",
+        channel_capacity
+    );
+    let (glob_tx, _) = tokio::sync::broadcast::channel(channel_capacity.into());
     glob_tx
 }
 
