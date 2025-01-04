@@ -1,0 +1,8 @@
+[package]
+name = "pub_sub_message"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full", "tracing"] }
+log = "0.4.20"

@@ -43,6 +43,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let result = server::Unix { path: path.clone() }.start().await;
                 info!("{:?}", result);
             }
+            ServerType::WebSocket { url } => {}
         },
         Commands::Client {
             client_type,
@@ -70,6 +71,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     cert_password.clone(),
                 ),
                 ServerType::Unix { path } => (path, Some(&0), "unix".to_string(), None, None),
+                ServerType::WebSocket { url: _ } => {
+                    (&"".to_string(), None, "websocket".to_string(), None, None)
+                }
             };
 
             let client_: client::PubSubClient;

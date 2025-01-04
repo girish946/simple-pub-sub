@@ -41,6 +41,10 @@ pub enum ServerType {
         /// path
         path: String,
     },
+
+    WebSocket {
+        url: String,
+    },
 }
 
 /// the main command
