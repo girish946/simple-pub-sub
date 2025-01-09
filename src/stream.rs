@@ -2,6 +2,8 @@ use crate::message;
 use log::{debug, error, trace, warn};
 use tokio::io::AsyncReadExt;
 
+const HEADER_SIZE: usize = 8;
+
 /// reads a data from a `TcpStream` and returns a `Msg`.
 pub async fn read_message<S>(s: &mut S) -> Result<message::Msg, tokio::io::Error>
 where
@@ -31,8 +33,11 @@ where
             "error while reading the data from socket".to_string(),
         ));
     }
-    debug!("incoming pkt: {:?}", pkt_buf[..8].to_vec().clone());
-    let header: message::Header = match message::Header::from_vec(pkt_buf[..8].to_vec()) {
+    debug!(
+        "incoming pkt: {:?}",
+        pkt_buf[..HEADER_SIZE].to_vec().clone()
+    );
+    let header: message::Header = match message::Header::from_vec(pkt_buf[..HEADER_SIZE].to_vec()) {
         Ok(h) => h,
         Err(e) => {
             error!("could not parse header aborting");
@@ -44,15 +49,17 @@ where
     };
     debug!("{:?}", header);
 
-    let topic: String =
-        match String::from_utf8(pkt_buf[8..(8 + header.topic_length).into()].to_vec()) {
-            Ok(topic) => topic,
-            Err(_e) => {
-                error!("unable to parse topic, topic needs to be in utf-8");
-                "".to_string()
-            }
-        };
-    let message_position: usize = ((8 + header.topic_length) as u16 + header.message_length).into();
+    let topic: String = match String::from_utf8(
+        pkt_buf[HEADER_SIZE..(HEADER_SIZE + header.topic_length as usize).into()].to_vec(),
+    ) {
+        Ok(topic) => topic,
+        Err(_e) => {
+            error!("unable to parse topic, topic needs to be in utf-8");
+            "".to_string()
+        }
+    };
+    let message_position: usize =
+        ((HEADER_SIZE + header.topic_length as usize) as u16 + header.message_length).into();
 
     if 504 - u16::from(header.topic_length) < header.message_length {
         let bytes_remaining = header.message_length - (504 - u16::from(header.topic_length));
@@ -88,7 +95,8 @@ where
     Ok(message::Msg {
         header: header.clone(),
         topic,
-        message: pkt_buf[(8 + header.topic_length).into()..message_position].to_vec(),
+        message: pkt_buf[(HEADER_SIZE + header.topic_length as usize).into()..message_position]
+            .to_vec(),
         channel: None,
         client_id: None,
     })

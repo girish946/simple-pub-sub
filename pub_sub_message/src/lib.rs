@@ -1,6 +1,8 @@
 use log::{error, trace};
 use tokio::sync::broadcast::Sender;
 
+pub const HEADER_LEN: usize = 8;
+
 /// Packet Type Publish
 pub const PUBLISH: u8 = 0x02;
 /// Packet Type Subscribe
@@ -326,4 +328,46 @@ pub fn get_msg_response(msg: Msg) -> Result<Vec<u8>, String> {
     };
     resp.extend(msg.topic.bytes());
     Ok(resp)
+}
+
+pub fn msg_from_bytes(msg_bytes: Vec<u8>) -> Result<Msg, String> {
+    if !msg_bytes.len() < HEADER_LEN {
+        return Err(format!(
+            "invalid message length: {} bytes, can't parse msg header",
+            msg_bytes.len()
+        ));
+    }
+    let header = match Header::from_vec(msg_bytes[..8].to_vec()) {
+        Ok(header) => header,
+        Err(e) => {
+            return Err(format!("{:?}", e));
+        }
+    };
+    let topic_len = HEADER_LEN + header.topic_length as usize;
+    if msg_bytes.len() < topic_len {
+        return Err(format!(
+            "invalid message length: {}, can't parse topic name",
+            msg_bytes.len()
+        ));
+    }
+    let topic = match String::from_utf8(msg_bytes[HEADER_LEN..topic_len].to_vec()) {
+        Ok(topic) => topic,
+        Err(e) => {
+            return Err(format!("invalid topic name: {}", e));
+        }
+    };
+    if msg_bytes.len() < header.message_length as usize {
+        return Err(format!(
+            "invalid message length: {}, can't get the message bytes",
+            msg_bytes.len()
+        ));
+    }
+
+    Ok(Msg {
+        header,
+        topic,
+        message: msg_bytes[topic_len..].to_vec(),
+        channel: None,
+        client_id: None,
+    })
 }

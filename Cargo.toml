@@ -21,7 +21,7 @@ name = "simple-pub-sub"
 path = "src/main.rs"
 
 [workspace]
-members = ["pub_sub_message"]
+members = ["pub_sub_message", "pub_sub_ws"]
 
 
 [dependencies]

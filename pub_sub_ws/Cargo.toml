@@ -1,0 +1,11 @@
+[package]
+name = "pub_sub_ws"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "4"
+actix-web-actors = "4.2.0"
+actix = "0.13.1"
+pub_sub_message = { path = "../pub_sub_message" }
+env_logger = "0.11.3"
