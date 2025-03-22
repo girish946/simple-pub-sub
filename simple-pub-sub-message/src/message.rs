@@ -26,10 +26,7 @@ impl Msg {
     /// let msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
     /// ```
     pub fn new(pkt_type: PktType, topic: String, message: Option<Vec<u8>>) -> Msg {
-        let msg: Vec<u8> = match message {
-            Some(m) => m,
-            None => vec![],
-        };
+        let msg: Vec<u8> = message.unwrap_or_default();
 
         Msg {
             header: Header::new(pkt_type, topic.len() as u8, msg.len() as u16),
@@ -123,7 +120,7 @@ impl PartialEq for Msg {
         {
             return true;
         }
-        return false;
+        false
     }
 }
 impl TryFrom<&[u8]> for Msg {
