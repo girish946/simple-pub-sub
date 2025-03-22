@@ -1,5 +1,8 @@
 use crate::message;
+use crate::message::Msg;
 use crate::stream;
+use crate::Header;
+use crate::PktType;
 use log::{error, info, trace};
 use std::fs::File;
 use std::io::ErrorKind;
@@ -161,14 +164,14 @@ impl Client {
 
     /// Sends the message to the given server and returns the ack
     /// the server could be either a tcp or unix server
-    pub async fn post(&mut self, msg: message::Msg) -> Result<Vec<u8>, tokio::io::Error> {
+    pub async fn post(&mut self, msg: Msg) -> Result<Vec<u8>, tokio::io::Error> {
         self.write(msg.bytes()).await?;
         let mut buf: Vec<u8>;
         buf = vec![0; 8];
         match self.read(&mut buf).await {
             Ok(()) => {
                 trace!("buf: {:?}", buf);
-                match message::Header::try_from(buf.clone()) {
+                match Header::try_from(buf.clone()) {
                     Ok(resp) => {
                         trace!("resp: {:?}", resp);
                         // read the remaining message
@@ -200,7 +203,7 @@ impl Client {
         topic: String,
         message: Vec<u8>,
     ) -> Result<(), tokio::io::Error> {
-        let msg: message::Msg = message::Msg::new(message::PktType::PUBLISH, topic, Some(message));
+        let msg: Msg = Msg::new(PktType::PUBLISH, topic, Some(message));
         trace!("msg: {:?}", msg);
 
         let buf = match self.post(msg).await {
@@ -209,7 +212,7 @@ impl Client {
         };
 
         trace!("the raw buffer is: {:?}", buf);
-        let resp_: message::Header = match message::Header::try_from(buf) {
+        let resp_: Header = match Header::try_from(buf) {
             Ok(resp) => resp,
             Err(e) => {
                 return Err(tokio::io::Error::new(ErrorKind::Other, format!("{:?}", e)));
@@ -222,8 +225,8 @@ impl Client {
 
     /// Sends the query message to the server
     pub async fn query(&mut self, topic: String) -> Result<String, tokio::io::Error> {
-        let msg: message::Msg = message::Msg::new(
-            message::PktType::QUERY,
+        let msg: Msg = Msg::new(
+            PktType::QUERY,
             topic,
             Some(" ".to_string().as_bytes().to_vec()),
         );
@@ -242,7 +245,7 @@ impl Client {
 
     /// subscribes to the given topic
     pub async fn subscribe(&mut self, topic: String) -> Result<(), tokio::io::Error> {
-        let msg: message::Msg = message::Msg::new(message::PktType::SUBSCRIBE, topic, None);
+        let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
         trace!("msg: {:?}", msg);
         self.write(msg.bytes()).await?;
         if let Some(callback) = self.callback {

@@ -98,7 +98,7 @@ impl Header {
             PktType::UNSUBSCRIBE => PktType::UNSUBSCRIBEACK,
             PktType::QUERY => PktType::QUERYRESP,
             _ => {
-                return Err(anyhow!(HeaderError::InvalidResuestResponseType));
+                return Err(anyhow!(HeaderError::InvalidResponseType));
             }
         };
         Ok(Header {
