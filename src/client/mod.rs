@@ -3,9 +3,10 @@ use crate::message::Msg;
 use crate::stream;
 use crate::Header;
 use crate::PktType;
-use log::{error, info, trace};
+use anyhow::bail;
+use anyhow::Result;
+use log::{info, trace};
 use std::fs::File;
-use std::io::ErrorKind;
 use std::io::Read;
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -83,66 +84,32 @@ impl Client {
         self.callback = Some(callback)
     }
 
-    async fn connect_tls(&mut self, url: String, cert: String) -> Result<(), tokio::io::Error> {
+    async fn connect_tls(&mut self, url: String, cert: String) -> Result<()> {
         // Load CA certificate
-        let mut file = match File::open(cert) {
-            Ok(file) => file,
-            Err(e) => {
-                error!("unable to open the certificate file: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
+        let mut file = File::open(cert)?;
         let mut ca_cert = vec![];
-        match file.read_to_end(&mut ca_cert) {
-            Ok(size) => size,
-            Err(e) => {
-                error!("unable to read the CA file: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
-        let ca_cert = match Certificate::from_pem(&ca_cert) {
-            Ok(cert) => cert,
-            Err(e) => {
-                error!("unable to parse the CA certificate: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
+        file.read_to_end(&mut ca_cert)?;
+        let ca_cert = Certificate::from_pem(&ca_cert)?;
 
         // Configure TLS
-        let connector = match TlsConnector::builder()
+        let connector = TlsConnector::builder()
             .add_root_certificate(ca_cert)
-            .build()
-        {
-            Ok(connector) => connector,
-            Err(e) => {
-                error!("cannot create TLS connector: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
+            .build()?;
 
         let connector = tokio_native_tls::TlsConnector::from(connector);
 
         // Connect to the server
-        let stream = match TcpStream::connect(url).await {
-            Ok(stream) => stream,
-            Err(e) => {
-                error!("failed to connect to server: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
+        let stream = TcpStream::connect(url).await?;
 
-        self.stream = match connector.connect("localhost", stream).await {
-            Ok(stream) => Some(StreamType::Tls(stream)),
-            Err(e) => {
-                error!("could not establish the tls connection: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
+        // create the StreamType::Tls
+        self.stream = Some(StreamType::Tls(
+            connector.connect("localhost", stream).await?,
+        ));
         Ok(())
     }
 
     /// Connects to the server
-    pub async fn connect(&mut self) -> Result<(), tokio::io::Error> {
+    pub async fn connect(&mut self) -> Result<()> {
         match self.client_type.clone() {
             PubSubClient::Tcp(tcp_client) => {
                 let server_url: String = format!("{}:{}", tcp_client.server, tcp_client.port);
@@ -164,67 +131,34 @@ impl Client {
 
     /// Sends the message to the given server and returns the ack
     /// the server could be either a tcp or unix server
-    pub async fn post(&mut self, msg: Msg) -> Result<Vec<u8>, tokio::io::Error> {
+    pub async fn post(&mut self, msg: Msg) -> Result<Vec<u8>> {
         self.write(msg.bytes()).await?;
-        let mut buf: Vec<u8>;
-        buf = vec![0; 8];
-        match self.read(&mut buf).await {
-            Ok(()) => {
-                trace!("buf: {:?}", buf);
-                match Header::try_from(buf.clone()) {
-                    Ok(resp) => {
-                        trace!("resp: {:?}", resp);
-                        // read the remaining message
-                        let mut buf_buf = Vec::with_capacity(resp.message_length as usize);
-                        trace!("reading remaining bytes");
-                        match self.read_buf(&mut buf_buf).await {
-                            Ok(()) => {
-                                buf.extend(buf_buf);
-                            }
-                            Err(e) => {
-                                return Err(e);
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        return Err(tokio::io::Error::new(ErrorKind::Other, format!("{:?}", e)));
-                    }
-                };
-
-                Ok(buf)
-            }
-            Err(e) => Err(e),
-        }
+        let mut response_message_buffer: Vec<u8>;
+        response_message_buffer = vec![0; 8];
+        self.read(&mut response_message_buffer).await?;
+        trace!("buf: {:?}", response_message_buffer);
+        let response_header = Header::try_from(response_message_buffer.clone())?;
+        trace!("resp: {:?}", response_header);
+        let mut response_body = Vec::with_capacity(response_header.message_length as usize);
+        trace!("reading remaining bytes");
+        self.read_buf(&mut response_body).await?;
+        response_message_buffer.extend(response_body);
+        Ok(response_message_buffer)
     }
 
     /// Publishes the message to the given topic
-    pub async fn publish(
-        &mut self,
-        topic: String,
-        message: Vec<u8>,
-    ) -> Result<(), tokio::io::Error> {
+    pub async fn publish(&mut self, topic: String, message: Vec<u8>) -> Result<()> {
         let msg: Msg = Msg::new(PktType::PUBLISH, topic, Some(message));
         trace!("msg: {:?}", msg);
-
-        let buf = match self.post(msg).await {
-            Ok(resp) => resp,
-            Err(e) => return Err(e),
-        };
-
+        let buf = self.post(msg).await?;
         trace!("the raw buffer is: {:?}", buf);
-        let resp_: Header = match Header::try_from(buf) {
-            Ok(resp) => resp,
-            Err(e) => {
-                return Err(tokio::io::Error::new(ErrorKind::Other, format!("{:?}", e)));
-            }
-        };
+        let resp_: Header = Header::try_from(buf)?;
         trace!("{:?}", resp_);
-
         Ok(())
     }
 
     /// Sends the query message to the server
-    pub async fn query(&mut self, topic: String) -> Result<String, tokio::io::Error> {
+    pub async fn query(&mut self, topic: String) -> Result<String> {
         let msg: Msg = Msg::new(
             PktType::QUERY,
             topic,
@@ -233,18 +167,12 @@ impl Client {
         trace!("msg: {:?}", msg);
 
         self.write(msg.bytes()).await?;
-        let msg = self.read_message().await;
-        match msg {
-            Ok(m) => match String::from_utf8(m.message) {
-                Ok(s) => Ok(s),
-                Err(e) => Err(tokio::io::Error::new(ErrorKind::Other, e.to_string())),
-            },
-            Err(e) => Err(e),
-        }
+        let msg = self.read_message().await?;
+        Ok(String::from_utf8(msg.message)?)
     }
 
     /// subscribes to the given topic
-    pub async fn subscribe(&mut self, topic: String) -> Result<(), tokio::io::Error> {
+    pub async fn subscribe(&mut self, topic: String) -> Result<()> {
         let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
         trace!("msg: {:?}", msg);
         self.write(msg.bytes()).await?;
@@ -260,131 +188,58 @@ impl Client {
                 }
             }
         } else {
-            Err(tokio::io::Error::new(
-                tokio::io::ErrorKind::Other,
-                "no callback function is set".to_string(),
-            ))
-        }
-    }
-    pub async fn write(&mut self, message: Vec<u8>) -> Result<(), tokio::io::Error> {
-        if let Some(stream) = &mut self.stream {
-            match stream {
-                StreamType::Tls(tls_stream) => match tls_stream.write_all(&message).await {
-                    Ok(size) => {
-                        trace!("{:?} bytes written", size);
-                        Ok(())
-                    }
-                    Err(e) => Err(tokio::io::Error::new(
-                        tokio::io::ErrorKind::Other,
-                        e.to_string(),
-                    )),
-                },
-                StreamType::Tcp(ref mut tcp_stream) => match tcp_stream.write_all(&message).await {
-                    Ok(size) => {
-                        trace!("{:?} bytes written", size);
-                        Ok(())
-                    }
-                    Err(e) => Err(e),
-                },
-
-                StreamType::Unix(ref mut unix_stream) => {
-                    match unix_stream.write_all(&message).await {
-                        Ok(size) => {
-                            trace!("{:?} bytes written", size);
-                            Ok(())
-                        }
-
-                        Err(e) => Err(e),
-                    }
-                }
-            }
-        } else {
-            Err(tokio::io::Error::new(
-                tokio::io::ErrorKind::Other,
-                "client not connected yet".to_string(),
-            ))
+            bail!("no callback function is set");
         }
     }
 
-    pub async fn read(&mut self, message: &mut [u8]) -> Result<(), tokio::io::Error> {
+    pub async fn write(&mut self, message: Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
-            match stream {
-                StreamType::Tls(ref mut tls_stream) => match tls_stream.read(message).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e),
-                },
-                StreamType::Tcp(ref mut tcp_stream) => match tcp_stream.read(message).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e),
-                },
-                StreamType::Unix(ref mut unix_stream) => match unix_stream.read(message).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e),
-                },
-            }
+            let size = match stream {
+                StreamType::Tls(tls_stream) => tls_stream.write_all(&message).await?,
+                StreamType::Tcp(ref mut tcp_stream) => tcp_stream.write_all(&message).await?,
+                StreamType::Unix(ref mut unix_stream) => unix_stream.write_all(&message).await?,
+            };
+            trace!("{:?} bytes written", size);
+            Ok(())
         } else {
-            Err(tokio::io::Error::new(
-                tokio::io::ErrorKind::Other,
-                "client not connected yet.".to_string(),
-            ))
-        }
-    }
-    pub async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<(), tokio::io::Error> {
-        if let Some(stream) = &mut self.stream {
-            match stream {
-                StreamType::Tls(ref mut tls_stream) => match tls_stream.read_buf(message).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e),
-                },
-                StreamType::Tcp(ref mut tcp_stream) => match tcp_stream.read_buf(message).await {
-                    Ok(_) => Ok(()),
-                    Err(e) => Err(e),
-                },
-                StreamType::Unix(ref mut unix_stream) => {
-                    match unix_stream.read_buf(message).await {
-                        Ok(_) => Ok(()),
-                        Err(e) => Err(e),
-                    }
-                }
-            }
-        } else {
-            Err(tokio::io::Error::new(
-                tokio::io::ErrorKind::Other,
-                "client not connected yet.".to_string(),
-            ))
+            bail!("client is not connected yet");
         }
     }
 
-    pub async fn read_message(&mut self) -> Result<message::Msg, tokio::io::Error> {
+    pub async fn read(&mut self, message: &mut [u8]) -> Result<()> {
         if let Some(stream) = &mut self.stream {
             match stream {
-                StreamType::Tcp(stream) => match stream::read_message(stream).await {
-                    Ok(msg) => Ok(msg),
-                    Err(e) => {
-                        error!("could not read the message from the tcp stream: {}", e);
-                        Err(e)
-                    }
-                },
-                StreamType::Tls(stream) => match stream::read_message(stream).await {
-                    Ok(msg) => Ok(msg),
-                    Err(e) => {
-                        error!("could not read the message from the tcp stream: {}", e);
-                        Err(e)
-                    }
-                },
-                StreamType::Unix(stream) => match stream::read_message(stream).await {
-                    Ok(msg) => Ok(msg),
-                    Err(e) => {
-                        error!("could not read the message from the tcp stream: {}", e);
-                        Err(e)
-                    }
-                },
+                StreamType::Tls(ref mut tls_stream) => tls_stream.read(message).await?,
+                StreamType::Tcp(ref mut tcp_stream) => tcp_stream.read(message).await?,
+                StreamType::Unix(ref mut unix_stream) => unix_stream.read(message).await?,
+            };
+            Ok(())
+        } else {
+            bail!("client is not connected yet");
+        }
+    }
+    pub async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<()> {
+        if let Some(stream) = &mut self.stream {
+            match stream {
+                StreamType::Tls(ref mut tls_stream) => tls_stream.read_buf(message).await?,
+                StreamType::Tcp(ref mut tcp_stream) => tcp_stream.read_buf(message).await?,
+                StreamType::Unix(ref mut unix_stream) => unix_stream.read_buf(message).await?,
+            };
+            Ok(())
+        } else {
+            bail!("client is not connected yet");
+        }
+    }
+
+    pub async fn read_message(&mut self) -> Result<message::Msg> {
+        if let Some(stream) = &mut self.stream {
+            match stream {
+                StreamType::Tcp(stream) => Ok(stream::read_message(stream).await?),
+                StreamType::Tls(stream) => Ok(stream::read_message(stream).await?),
+                StreamType::Unix(stream) => Ok(stream::read_message(stream).await?),
             }
         } else {
-            Err(tokio::io::Error::new(
-                tokio::io::ErrorKind::Other,
-                "client not connected yet.".to_string(),
-            ))
+            bail!("client is not connected yet");
         }
     }
 }

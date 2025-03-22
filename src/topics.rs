@@ -96,9 +96,9 @@ impl TopicMap {
 }
 
 /// returns a global broadcaster.
-pub fn get_global_broadcaster() -> tokio::sync::broadcast::Sender<Msg> {
+pub fn get_global_broadcaster(capacity: usize) -> tokio::sync::broadcast::Sender<Msg> {
     info!("creating broadcast channel");
-    let (glob_tx, _) = tokio::sync::broadcast::channel(1024);
+    let (glob_tx, _) = tokio::sync::broadcast::channel(capacity);
     glob_tx
 }
 

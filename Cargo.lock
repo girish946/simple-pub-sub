@@ -694,6 +694,7 @@ dependencies = [
 name = "simple-pub-sub"
 version = "0.1.5"
 dependencies = [
+ "anyhow",
  "clap",
  "clap_complete",
  "clap_mangen",

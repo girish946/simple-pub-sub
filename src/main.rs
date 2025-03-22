@@ -22,6 +22,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env::set_var("RUST_LOG", log_level);
     env_logger::init();
 
+    let queue_capacity = cli.capacity.unwrap_or(1024);
+
     match &cli.command {
         Commands::Server { server_type } => match server_type {
             ServerType::Tcp {
@@ -35,13 +37,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     port: *port,
                     cert: cert.clone(),
                     cert_password: cert_password.clone(),
+                    capacity: queue_capacity,
                 };
-                let result = server.start().await;
-                info!("{:?}", result);
+                match server.start().await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("{:?}", e);
+                    }
+                };
             }
             ServerType::Unix { path } => {
-                let result = server::Unix { path: path.clone() }.start().await;
-                info!("{:?}", result);
+                let server = server::Unix {
+                    path: path.clone(),
+                    capacity: queue_capacity,
+                };
+                match server.start().await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("{:?}", e);
+                    }
+                };
             }
         },
         Commands::Client {
@@ -99,7 +114,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
             match client.connect().await {
                 Ok(()) => {}
                 Err(e) => {
-                    error!("{}", e.to_string());
+                    error!("{:?}", e);
+
                     return Ok(());
                 }
             };
@@ -130,7 +146,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             info!("{}", resp)
                         }
                         Err(e) => {
-                            error!("{}", e.to_string())
+                            error!("{:?}", e)
                         }
                     };
                 }
