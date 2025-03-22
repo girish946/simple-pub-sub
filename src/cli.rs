@@ -53,6 +53,10 @@ pub struct Cli {
     /// log level, default: info
     #[clap(long, global = true)]
     pub log_level: Option<LogLevel>,
+
+    /// queue size
+    #[clap(long, global = true)]
+    pub capacity: Option<usize>,
 }
 
 /// the subcommands

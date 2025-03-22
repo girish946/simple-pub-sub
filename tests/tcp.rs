@@ -13,6 +13,7 @@ mod tests {
             port: 6480,
             cert: None,
             cert_password: None,
+            capacity: 1024,
         });
         let _ = server.start().await;
     }

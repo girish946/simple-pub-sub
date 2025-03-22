@@ -10,6 +10,7 @@ mod tests {
         println!("server started");
         let server = simple_pub_sub::server::ServerType::Unix(simple_pub_sub::server::Unix {
             path: addr.clone(),
+            capacity: 1024,
         });
         let result = server.start().await;
 

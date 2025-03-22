@@ -108,6 +108,9 @@ pub fn get_global_broadcaster() -> tokio::sync::broadcast::Sender<Msg> {
         channel_capacity
     );
     let (glob_tx, _) = tokio::sync::broadcast::channel(channel_capacity.into());
+pub fn get_global_broadcaster(capacity: usize) -> tokio::sync::broadcast::Sender<Msg> {
+    info!("creating broadcast channel");
+    let (glob_tx, _) = tokio::sync::broadcast::channel(capacity);
     glob_tx
 }
 

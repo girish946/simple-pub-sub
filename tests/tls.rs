@@ -57,6 +57,7 @@ mod tests {
                 port,
                 cert: Some(cert.clone()),
                 cert_password: Some(password.clone()),
+                capacity: 1024,
             }),
         };
         let _ = server.start().await;

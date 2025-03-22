@@ -16,6 +16,7 @@ pub struct Tcp {
     pub port: u16,
     pub cert: Option<String>,
     pub cert_password: Option<String>,
+    pub capacity: usize,
 }
 
 impl ServerTrait for Tcp {
@@ -26,20 +27,22 @@ impl ServerTrait for Tcp {
                 self.port,
                 cert.clone(),
                 self.cert_password.clone(),
+                self.capacity,
             )
             .await
         } else {
-            start_tcp_server(format!("{}:{}", self.host, self.port)).await
+            start_tcp_server(format!("{}:{}", self.host, self.port), self.capacity).await
         }
     }
 }
 pub struct Unix {
     pub path: String,
+    pub capacity: usize,
 }
 
 impl ServerTrait for Unix {
     async fn start(&self) -> Result<(), tokio::io::Error> {
-        start_unix_server(self.path.clone()).await
+        start_unix_server(self.path.clone(), self.capacity).await
     }
 }
 impl Drop for Unix {
@@ -79,6 +82,7 @@ async fn start_tls_server(
     port: u16,
     cert: String,
     cert_password: Option<String>,
+    capacity: usize,
 ) -> Result<(), tokio::io::Error> {
     // Load TLS identity (certificate and private key)
 
@@ -124,8 +128,8 @@ async fn start_tls_server(
         .await
         .expect("cannot bind to address");
 
-    info!("Server listening on port 4433");
-    let tx = topics::get_global_broadcaster();
+    println!("Server listening on port 4433");
+    let tx = topics::get_global_broadcaster(capacity);
 
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
 
@@ -145,12 +149,12 @@ async fn start_tls_server(
 }
 
 /// Starts a tcp server on the given address
-async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
+async fn start_tcp_server(addr: String, capacity: usize) -> Result<(), tokio::io::Error> {
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on: {}", addr);
     info!("getting global broadcaster");
 
-    let tx = topics::get_global_broadcaster();
+    let tx = topics::get_global_broadcaster(capacity);
 
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
 
@@ -162,7 +166,7 @@ async fn start_tcp_server(addr: String) -> Result<(), tokio::io::Error> {
 }
 
 /// Starts a unix server on the given path
-async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
+async fn start_unix_server(path: String, capacity: usize) -> Result<(), tokio::io::Error> {
     if std::path::Path::new(&path).exists() {
         std::fs::remove_file(path.clone())?;
     }
@@ -170,7 +174,7 @@ async fn start_unix_server(path: String) -> Result<(), tokio::io::Error> {
     let listener = UnixListener::bind(&path)?;
     info!("Listening on: {}", path);
     info!("getting global broadcaster");
-    let tx = topics::get_global_broadcaster();
+    let tx = topics::get_global_broadcaster(capacity);
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
     loop {
         let (socket, addr) = listener.accept().await?;
