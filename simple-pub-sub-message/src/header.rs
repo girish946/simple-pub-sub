@@ -50,7 +50,7 @@ const PADDING_BYTE: u8 = 0x00;
 
 /// Header for the pub/sub packet
 /// total length 8 bytes.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Header {
     /// start byte of the packet, default value: 0x0F
     pub header: u8,
