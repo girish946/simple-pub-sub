@@ -46,6 +46,43 @@ pub enum StreamType {
     Unix(UnixStream),
 }
 
+impl StreamType {
+    async fn read_message(&mut self) -> Result<Msg> {
+        match self {
+            StreamType::Tcp(stream) => Ok(stream::read_message(stream).await?),
+            StreamType::Tls(stream) => Ok(stream::read_message(stream).await?),
+            StreamType::Unix(stream) => Ok(stream::read_message(stream).await?),
+        }
+    }
+
+    async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<usize> {
+        let size = match self {
+            StreamType::Tls(ref mut tls_stream) => tls_stream.read_buf(message).await?,
+            StreamType::Tcp(ref mut tcp_stream) => tcp_stream.read_buf(message).await?,
+            StreamType::Unix(ref mut unix_stream) => unix_stream.read_buf(message).await?,
+        };
+        Ok(size)
+    }
+
+    async fn read(&mut self, message: &mut [u8]) -> Result<usize> {
+        let size = match self {
+            StreamType::Tls(ref mut tls_stream) => tls_stream.read(message).await?,
+            StreamType::Tcp(ref mut tcp_stream) => tcp_stream.read(message).await?,
+            StreamType::Unix(ref mut unix_stream) => unix_stream.read(message).await?,
+        };
+        Ok(size)
+    }
+
+    async fn write_all(&mut self, message: Vec<u8>) -> Result<()> {
+        match self {
+            StreamType::Tls(tls_stream) => tls_stream.write_all(&message).await?,
+            StreamType::Tcp(ref mut tcp_stream) => tcp_stream.write_all(&message).await?,
+            StreamType::Unix(ref mut unix_stream) => unix_stream.write_all(&message).await?,
+        };
+        Ok(())
+    }
+}
+
 /// on_message callback function
 type Callback = fn(String, Vec<u8>);
 
@@ -194,12 +231,7 @@ impl Client {
 
     pub async fn write(&mut self, message: Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
-            let size = match stream {
-                StreamType::Tls(tls_stream) => tls_stream.write_all(&message).await?,
-                StreamType::Tcp(ref mut tcp_stream) => tcp_stream.write_all(&message).await?,
-                StreamType::Unix(ref mut unix_stream) => unix_stream.write_all(&message).await?,
-            };
-            trace!("{:?} bytes written", size);
+            stream.write_all(message).await?;
             Ok(())
         } else {
             bail!("client is not connected yet");
@@ -208,11 +240,8 @@ impl Client {
 
     pub async fn read(&mut self, message: &mut [u8]) -> Result<()> {
         if let Some(stream) = &mut self.stream {
-            match stream {
-                StreamType::Tls(ref mut tls_stream) => tls_stream.read(message).await?,
-                StreamType::Tcp(ref mut tcp_stream) => tcp_stream.read(message).await?,
-                StreamType::Unix(ref mut unix_stream) => unix_stream.read(message).await?,
-            };
+            let size = stream.read(message).await?;
+            trace!("read: {} bytes", size);
             Ok(())
         } else {
             bail!("client is not connected yet");
@@ -220,11 +249,8 @@ impl Client {
     }
     pub async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
-            match stream {
-                StreamType::Tls(ref mut tls_stream) => tls_stream.read_buf(message).await?,
-                StreamType::Tcp(ref mut tcp_stream) => tcp_stream.read_buf(message).await?,
-                StreamType::Unix(ref mut unix_stream) => unix_stream.read_buf(message).await?,
-            };
+            let size = stream.read_buf(message).await?;
+            trace!("read: {} bytes", size);
             Ok(())
         } else {
             bail!("client is not connected yet");
@@ -233,11 +259,7 @@ impl Client {
 
     pub async fn read_message(&mut self) -> Result<message::Msg> {
         if let Some(stream) = &mut self.stream {
-            match stream {
-                StreamType::Tcp(stream) => Ok(stream::read_message(stream).await?),
-                StreamType::Tls(stream) => Ok(stream::read_message(stream).await?),
-                StreamType::Unix(stream) => Ok(stream::read_message(stream).await?),
-            }
+            stream.read_message().await
         } else {
             bail!("client is not connected yet");
         }
