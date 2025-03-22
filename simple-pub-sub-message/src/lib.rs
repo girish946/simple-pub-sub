@@ -35,6 +35,8 @@ pub mod constants {
 
 #[cfg(test)]
 mod tests {
+    use log::info;
+
     use crate::header::Header;
 
     // use super::*;
@@ -67,5 +69,31 @@ mod tests {
             0,  // `PADDING_BYTE`
         ])
         .is_err());
+    }
+
+    #[test]
+    fn message_parse_pass() {
+        use crate::message::Msg;
+
+        let buf = [
+            15, 0, 1, 2, 3, 0, 12, 0, 97, 98, 99, 116, 101, 115, 116, 32, 109, 101, 115, 115, 97,
+            103, 101,
+        ];
+        let msg = Msg::try_from(buf.as_ref());
+        info!("{:?}", msg);
+        assert!(msg.is_ok());
+        info!("{:?}", msg.unwrap());
+    }
+
+    #[test]
+    fn message_parse_fail() {
+        use crate::message::Msg;
+        env_logger::init();
+        let buf = [
+            15, 0, 1, 2, 3, 0, 12, 0, 97, 98, 99, 116, 101, 115, 116, 32, 109, 101, 115, 115, 97,
+            103,
+        ];
+        let msg = Msg::try_from(buf.as_ref());
+        assert!(msg.is_err());
     }
 }
