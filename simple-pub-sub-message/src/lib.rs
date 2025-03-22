@@ -1,7 +1,7 @@
 pub mod error;
 pub mod header;
+pub mod message;
 pub mod pkt;
-
 pub use pkt::PktType;
 
 pub mod constants {

@@ -1,5 +1,6 @@
 use crate::message;
 use crate::stream;
+use crate::PktType;
 use log::{error, info, warn};
 use tokio::io::AsyncWriteExt;
 use tokio::sync::broadcast::Sender;
@@ -38,7 +39,7 @@ where
                             if !m.topic.is_empty() {
                                 info!("topic: {}", m.topic);
                                 match m.header.pkt_type{
-                                    message::PktType::PUBLISH=>{
+                                    PktType::PUBLISH=>{
                                         info!("it's a publish packet");
                                         match chan.send(m.clone()) {
                                             Ok(n) => n,
@@ -48,7 +49,7 @@ where
                                             }
                                         };
                                     },
-                                    message::PktType::SUBSCRIBE=>{
+                                    PktType::SUBSCRIBE=>{
                                         info!("it's a subscribe pkt attaching the channel");
                                         m.channel(client_chan.clone());
                                         match chan.send(m.clone()) {
@@ -59,7 +60,7 @@ where
                                             }
                                         };
                                     }
-                                    message::PktType::UNSUBSCRIBE=> {
+                                    PktType::UNSUBSCRIBE=> {
                                         m.channel(client_chan.clone());
                                         match chan.send(m.clone()) {
                                             Ok(n) => n,
@@ -69,7 +70,7 @@ where
                                             },
                                         };
                                     },
-                                    message::PktType::QUERY=>{
+                                    PktType::QUERY=>{
                                         m.channel(client_chan.clone());
                                         match chan.send(m.clone()) {
                                             Ok(n) => n,
@@ -82,7 +83,7 @@ where
                                     _=>{}
                                 };
                             }
-                           if  m.header.pkt_type != message::PktType::QUERY{
+                           if  m.header.pkt_type != PktType::QUERY{
                                match message::get_msg_response(m.clone()){
                                    Ok(v)=>{
                                        match socket.write_all(&v).await{

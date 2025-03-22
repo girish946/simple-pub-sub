@@ -22,5 +22,5 @@ pub enum HeaderError {
     InvalidMessageLength(usize),
     /// invalid request/response type
     #[error("invalid request/response type")]
-    InvalidResuestResponseType,
+    InvalidResponseType,
 }

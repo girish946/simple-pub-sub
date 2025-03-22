@@ -1,4 +1,5 @@
 use crate::message;
+use crate::Header;
 use log::{debug, error, trace, warn};
 use tokio::io::AsyncReadExt;
 
@@ -32,7 +33,7 @@ where
         ));
     }
     debug!("incoming pkt: {:?}", pkt_buf[..8].to_vec().clone());
-    let header: message::Header = match message::Header::try_from(&pkt_buf[..8]) {
+    let header: Header = match Header::try_from(&pkt_buf[..8]) {
         Ok(h) => h,
         Err(e) => {
             error!("could not parse header aborting");

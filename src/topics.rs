@@ -1,4 +1,5 @@
-use crate::message::{self, Msg};
+use crate::message::Msg;
+use crate::PktType;
 use log::{error, info, trace};
 use serde_json::json;
 use std::collections::{BTreeMap, HashMap};
@@ -113,11 +114,11 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                 if !msg.topic.is_empty() {
                     info!("topic received: {}", msg.topic);
                     match msg.header.pkt_type {
-                        message::PktType::PUBLISH => {
+                        PktType::PUBLISH => {
                             trace!("publishing to map:{:?}", map);
                             map.publish(msg).await;
                         }
-                        message::PktType::SUBSCRIBE => {
+                        PktType::SUBSCRIBE => {
                             map.add_channel(
                                 msg.topic,
                                 msg.client_id.unwrap(),
@@ -125,11 +126,11 @@ pub async fn topic_manager(chan: Sender<Msg>) {
                             );
                             trace!("map: {:?}", map);
                         }
-                        message::PktType::UNSUBSCRIBE => {
+                        PktType::UNSUBSCRIBE => {
                             info!("unsubscribing:");
                             map.remove_channel(msg.topic, msg.client_id.unwrap());
                         }
-                        message::PktType::QUERY => {
+                        PktType::QUERY => {
                             info!("querying");
                             let query_resp = map.query(msg.topic.clone());
                             info!("query_resp: {}", query_resp.clone());
