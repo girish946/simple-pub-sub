@@ -32,7 +32,7 @@ where
         ));
     }
     debug!("incoming pkt: {:?}", pkt_buf[..8].to_vec().clone());
-    let header: message::Header = match message::Header::from_vec(pkt_buf[..8].to_vec()) {
+    let header: message::Header = match message::Header::try_from(&pkt_buf[..8]) {
         Ok(h) => h,
         Err(e) => {
             error!("could not parse header aborting");

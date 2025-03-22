@@ -20,7 +20,11 @@ path = "src/lib.rs"
 name = "simple-pub-sub"
 path = "src/main.rs"
 
+[workspace]
+members = ["simple-pub-sub-message"]
+
 [dependencies]
+simple-pub-sub-message = { path = "./simple-pub-sub-message/" }
 tokio = { version = "1", features = ["full", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

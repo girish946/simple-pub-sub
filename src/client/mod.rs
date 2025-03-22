@@ -168,7 +168,7 @@ impl Client {
         match self.read(&mut buf).await {
             Ok(()) => {
                 trace!("buf: {:?}", buf);
-                match message::Header::from_vec(buf.clone()) {
+                match message::Header::try_from(buf.clone()) {
                     Ok(resp) => {
                         trace!("resp: {:?}", resp);
                         // read the remaining message
@@ -209,7 +209,7 @@ impl Client {
         };
 
         trace!("the raw buffer is: {:?}", buf);
-        let resp_: message::Header = match message::Header::from_vec(buf) {
+        let resp_: message::Header = match message::Header::try_from(buf) {
             Ok(resp) => resp,
             Err(e) => {
                 return Err(tokio::io::Error::new(ErrorKind::Other, format!("{:?}", e)));
