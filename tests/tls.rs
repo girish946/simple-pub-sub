@@ -92,7 +92,6 @@ mod tests {
                 "test message".to_string().into_bytes().to_vec(),
             )
             .await;
-        info!("{:?}", result);
 
         sleep(Duration::from_millis(1000)).await;
         assert!(result.is_ok());
