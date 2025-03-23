@@ -20,6 +20,32 @@ pub struct Tcp {
 }
 
 impl ServerTrait for Tcp {
+    /// Starts the simple pub sub server for the given server type
+    /// ```
+    /// use simple_pub_sub::server::ServerTrait as _;
+    /// // for tcp
+    /// async fn run_server_tcp(){
+    ///   let server = simple_pub_sub::server::ServerType::Tcp(simple_pub_sub::server::Tcp {
+    ///     host: "localhost".to_string(),
+    ///     port: 6480,
+    ///     cert: None,
+    ///     cert_password: None,
+    ///     capacity: 1024,
+    ///   });
+    ///   let _ = server.start().await;
+    /// }
+    /// // for tls
+    /// async fn run_server_tls(){
+    ///   let server = simple_pub_sub::server::ServerType::Tcp(simple_pub_sub::server::Tcp {
+    ///     host: "localhost".to_string(),
+    ///     port: 6480,
+    ///     cert: Some("certs/cert.pem".to_string()),
+    ///     cert_password: Some("password".to_string()),
+    ///     capacity: 1024,
+    ///   });
+    ///   let _ = server.start().await;
+    /// }
+    /// ```
     async fn start(&self) -> Result<(), tokio::io::Error> {
         if let Some(cert) = &self.cert {
             start_tls_server(
@@ -41,6 +67,15 @@ pub struct Unix {
 }
 
 impl ServerTrait for Unix {
+    /// start the pub-sub server over a unix socket
+    ///```
+    /// use crate::simple_pub_sub::server::ServerTrait as _;
+    /// let server = simple_pub_sub::server::ServerType::Unix(simple_pub_sub::server::Unix {
+    ///   path: "/tmp/sample.sock".to_string(),
+    ///   capacity: 1024,
+    /// });
+    /// let result = server.start();
+    ///```
     async fn start(&self) -> Result<(), tokio::io::Error> {
         start_unix_server(self.path.clone(), self.capacity).await
     }
@@ -58,6 +93,39 @@ pub enum ServerType {
     Unix(Unix),
 }
 impl ServerTrait for ServerType {
+    /// starts the simple-pub-sub server on the given server type
+    ///```
+    /// use simple_pub_sub::server::ServerTrait as _;
+    ///
+    /// // for tcp
+    ///   let server = simple_pub_sub::server::ServerType::Tcp(simple_pub_sub::server::Tcp {
+    ///     host: "localhost".to_string(),
+    ///     port: 6480,
+    ///     cert: None,
+    ///     cert_password: None,
+    ///     capacity: 1024,
+    ///   });
+    ///   server.start();
+    ///
+    /// // for tls
+    ///
+    ///   let server = simple_pub_sub::server::ServerType::Tcp(simple_pub_sub::server::Tcp {
+    ///     host: "localhost".to_string(),
+    ///     port: 6480,
+    ///     cert: Some("certs/cert.pem".to_string()),
+    ///     cert_password: Some("password".to_string()),
+    ///     capacity: 1024,
+    ///   });
+    ///   server.start();
+    ///
+    /// // for unix socket
+    /// use crate::simple_pub_sub::server::ServerTrait as _;
+    /// let server = simple_pub_sub::server::ServerType::Unix(simple_pub_sub::server::Unix {
+    ///   path: "/tmp/sample.sock".to_string(),
+    ///   capacity: 1024,
+    /// });
+    /// let result = server.start();
+    ///```
     async fn start(&self) -> Result<(), tokio::io::Error> {
         match self {
             ServerType::Tcp(tcp) => tcp.start().await,

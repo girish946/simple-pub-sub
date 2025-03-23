@@ -42,7 +42,6 @@ async fn create_tls_certs() {
 mod tests {
 
     use super::*;
-    use log::info;
 
     async fn start_serever() {
         let host = "0.0.0.0".to_string();
@@ -65,7 +64,6 @@ mod tests {
 
     #[tokio::test]
     async fn tls_client_publish() {
-        // std::env::set_var("RUST_LOG", "trace");
         env_logger::init();
         create_tls_certs().await;
         sleep(Duration::from_millis(5000)).await;
@@ -99,8 +97,6 @@ mod tests {
     }
     #[tokio::test]
     async fn tls_client_subscribe() {
-        // std::env::set_var("RUST_LOG", "trace");
-
         create_tls_certs().await;
         sleep(Duration::from_millis(5000)).await;
 

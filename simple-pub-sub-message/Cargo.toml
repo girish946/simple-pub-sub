@@ -1,7 +1,14 @@
 [package]
 name = "simple-pub-sub-message"
-version = "0.1.0"
 edition = "2021"
+version = "0.1.6"
+authors = ["Girish Joshi <mail@girishjoshi.io>"]
+license = "MIT"
+description = "message format for the simple-pub-sub"
+readme = "README.md"
+keywords = ["simple", "message", "broker", "pub-sub"]
+repository = "https://github.com/girish946/simple-pub-sub"
+categories = ["command-line-interface", "command-line-utilities", "message-bus"]
 
 [dependencies]
 thiserror = "2.0.12"
