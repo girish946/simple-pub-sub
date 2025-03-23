@@ -15,7 +15,7 @@ pub struct TopicMap {
 }
 impl TopicMap {
     /// Returns the number of connected clients for a given topic.
-    pub fn query(&self, topic: String) -> String {
+    pub(crate) fn query(&self, topic: String) -> String {
         let v: Vec<String>;
         if topic == "*" {
             v = self
@@ -32,7 +32,7 @@ impl TopicMap {
         }
     }
     /// Adds a channel to the map.
-    pub fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
+    pub(crate) fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
         if self.map.contains_key(&topic.clone()) {
             if let Some(channels) = self.map.get_mut(&topic.clone()) {
                 channels.entry(client_id).or_insert(channel);
@@ -45,7 +45,7 @@ impl TopicMap {
         }
     }
     /// Removes a channel from the map.
-    pub fn remove_channel(&mut self, topic: String, client_id: String) {
+    pub(crate) fn remove_channel(&mut self, topic: String, client_id: String) {
         if self.map.contains_key(&topic) {
             if let Some(channels) = self.map.get_mut(&topic) {
                 channels.remove(&client_id);
@@ -53,13 +53,9 @@ impl TopicMap {
             trace!("channels: {:?}", self.map);
         }
     }
-    /// adds a topic to the map.
-    pub fn add_topic(&mut self, topic: String) {
-        self.map.entry(topic).or_default();
-    }
 
     /// Publishes the message to the channels.
-    pub async fn publish(&mut self, msg: Msg) {
+    pub(crate) async fn publish(&mut self, msg: Msg) {
         if !self.map.contains_key(&msg.topic) {
             return;
         }
@@ -96,14 +92,14 @@ impl TopicMap {
 }
 
 /// returns a global broadcaster.
-pub fn get_global_broadcaster(capacity: usize) -> tokio::sync::broadcast::Sender<Msg> {
+pub(crate) fn get_global_broadcaster(capacity: usize) -> tokio::sync::broadcast::Sender<Msg> {
     info!("creating broadcast channel");
     let (glob_tx, _) = tokio::sync::broadcast::channel(capacity);
     glob_tx
 }
 
 /// Handles the incoming and out-going messages for each topic.
-pub async fn topic_manager(chan: Sender<Msg>) {
+pub(crate) async fn topic_manager(chan: Sender<Msg>) {
     let mut map: TopicMap = TopicMap {
         map: BTreeMap::new(),
     };

@@ -20,7 +20,7 @@ where
         .await
         .context("Error while reading data")?;
     if n == 0 {
-        bail!("error while readingdata from the socket");
+        bail!("Error while reading data from the socket");
     }
     debug!("incoming pkt: {:?}", pkt_buf[..8].to_vec().clone());
     let header: Header = Header::try_from(&pkt_buf[..8])?;
