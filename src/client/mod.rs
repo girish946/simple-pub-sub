@@ -38,11 +38,20 @@ pub enum PubSubClient {
     Unix(PubSubUnixClient),
 }
 
+impl PubSubClient {
+    fn server(&self) -> &str {
+        match self {
+            PubSubClient::Tcp(pub_sub_tcp_client) => &pub_sub_tcp_client.server,
+            PubSubClient::Unix(pub_sub_unix_client) => &pub_sub_unix_client.path,
+        }
+    }
+}
+
 /// Stream for Tcp and Unix connection
 #[derive(Debug)]
 pub enum StreamType {
     Tcp(TcpStream),
-    Tls(TlsStream<TcpStream>),
+    Tls(Box<TlsStream<TcpStream>>),
     Unix(UnixStream),
 }
 
@@ -136,12 +145,11 @@ impl Client {
         let connector = tokio_native_tls::TlsConnector::from(connector);
 
         // Connect to the server
-        let stream = TcpStream::connect(url).await?;
+        let stream = TcpStream::connect(&url).await?;
 
         // create the StreamType::Tls
-        self.stream = Some(StreamType::Tls(
-            connector.connect("localhost", stream).await?,
-        ));
+        let connector = connector.connect(self.client_type.server(), stream).await?;
+        self.stream = Some(StreamType::Tls(Box::new(connector)));
         Ok(())
     }
 
