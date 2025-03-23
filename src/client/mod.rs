@@ -19,22 +19,31 @@ use tokio_native_tls::TlsStream;
 /// Simple pub sub Client for Tcp connection
 #[derive(Debug, Clone)]
 pub struct PubSubTcpClient {
+    /// domain/host for the server
+    /// for example: `127.0.0.1`
     pub server: String,
+    /// port for the simple_pub_sub server
     pub port: u16,
+    /// tls certificate (`.pem`) file
     pub cert: Option<String>,
+    /// password for the tls certificate
     pub cert_password: Option<String>,
 }
 
 /// Simple pub sub Client for Unix connection
 #[derive(Debug, Clone)]
 pub struct PubSubUnixClient {
+    /// path for the unix sock file
+    /// for example: `/tmp/simple-pub-sub.sock`
     pub path: String,
 }
 
 /// Simple pub sub Client
 #[derive(Debug, Clone)]
 pub enum PubSubClient {
+    /// tcp client for the simple pub sub
     Tcp(PubSubTcpClient),
+    /// unix socket client for the simple pub sub
     Unix(PubSubUnixClient),
 }
 
@@ -50,8 +59,11 @@ impl PubSubClient {
 /// Stream for Tcp and Unix connection
 #[derive(Debug)]
 pub enum StreamType {
+    /// tcp stream
     Tcp(TcpStream),
+    /// tls stream
     Tls(Box<TlsStream<TcpStream>>),
+    /// unix socket stream
     Unix(UnixStream),
 }
 
@@ -117,6 +129,19 @@ pub fn on_message(topic: String, message: Vec<u8>) {
 
 impl Client {
     /// Creates a new instance of `Client`
+    /// ```
+    /// use simple_pub_sub::client::{self, PubSubClient, Client};
+    /// let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///        server: "localhost".to_string(),
+    ///        port: 6480,
+    ///        cert: None,
+    ///        cert_password: None,
+    /// };
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    /// );
+    /// ```
     pub fn new(client_type: PubSubClient) -> Client {
         Client {
             client_type,
@@ -126,6 +151,20 @@ impl Client {
     }
 
     /// Sets the on_message callback function
+    /// ```
+    /// use simple_pub_sub::client::{self, PubSubClient, Client};
+    /// let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///        server: "localhost".to_string(),
+    ///        port: 6480,
+    ///        cert: None,
+    ///        cert_password: None,
+    /// };
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    /// );
+    /// pub_sub_client.on_message(client::on_message);
+    /// ```
     pub fn on_message(&mut self, callback: Callback) {
         self.callback = Some(callback)
     }
@@ -154,6 +193,20 @@ impl Client {
     }
 
     /// Connects to the server
+    ///```
+    /// use simple_pub_sub::client::{self, PubSubClient, Client};
+    /// let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///        server: "localhost".to_string(),
+    ///        port: 6480,
+    ///        cert: None,
+    ///        cert_password: None,
+    /// };
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    /// );
+    /// pub_sub_client.connect();
+    /// ```
     pub async fn connect(&mut self) -> Result<()> {
         match self.client_type.clone() {
             PubSubClient::Tcp(tcp_client) => {
@@ -176,6 +229,27 @@ impl Client {
 
     /// Sends the message to the given server and returns the ack
     /// the server could be either a tcp or unix server
+    ///```
+    /// use simple_pub_sub::client::{PubSubClient, Client};
+    /// use simple_pub_sub::message::Msg;
+    /// use simple_pub_sub::PktType;
+    /// async fn publish_msg(){
+    ///   let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///          server: "localhost".to_string(),
+    ///          port: 6480,
+    ///          cert: None,
+    ///          cert_password: None,
+    ///   };
+    ///   // initialize the client.
+    ///   let mut client = simple_pub_sub::client::Client::new(
+    ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///   );
+    ///   // connect the client.
+    ///   let _ = client.connect();
+    ///   let msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
+    ///   client.post(msg).await.unwrap();
+    /// }
+    /// ```
     pub async fn post(&mut self, msg: Msg) -> Result<Vec<u8>> {
         self.write(msg.bytes()).await?;
         let mut response_message_buffer: Vec<u8>;
@@ -192,6 +266,29 @@ impl Client {
     }
 
     /// Publishes the message to the given topic
+    /// ```
+    /// use simple_pub_sub::client::{PubSubClient, Client};
+    /// async fn publish_msg(){
+    ///   let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///          server: "localhost".to_string(),
+    ///          port: 6480,
+    ///          cert: None,
+    ///          cert_password: None,
+    ///   };
+    ///   // initialize the client.
+    ///   let mut client = simple_pub_sub::client::Client::new(
+    ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///   );
+    ///   // connect the client.
+    ///   let _ = client.connect();
+    ///   // subscribe to the given topic.
+    ///   client
+    ///       .publish(
+    ///           "abc".to_string(),
+    ///           "test message".to_string().into_bytes().to_vec(),
+    ///       ).await.unwrap();
+    /// }
+    /// ```
     pub async fn publish(&mut self, topic: String, message: Vec<u8>) -> Result<()> {
         let msg: Msg = Msg::new(PktType::PUBLISH, topic, Some(message));
         trace!("msg: {:?}", msg);
@@ -203,6 +300,23 @@ impl Client {
     }
 
     /// Sends the query message to the server
+    /// ```
+    /// use simple_pub_sub::client::{self, PubSubClient, Client};
+    /// async fn query(){
+    ///   let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///          server: "localhost".to_string(),
+    ///          port: 6480,
+    ///          cert: None,
+    ///          cert_password: None,
+    ///   };
+    ///   // initialize the client.
+    ///   let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///   );
+    ///   pub_sub_client.connect().await;
+    ///   pub_sub_client.query("test".to_string());
+    /// }
+    /// ```
     pub async fn query(&mut self, topic: String) -> Result<String> {
         let msg: Msg = Msg::new(
             PktType::QUERY,
@@ -217,6 +331,21 @@ impl Client {
     }
 
     /// subscribes to the given topic
+    ///```
+    /// use simple_pub_sub::client::{self, PubSubClient, Client};
+    /// let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///        server: "localhost".to_string(),
+    ///        port: 6480,
+    ///        cert: None,
+    ///        cert_password: None,
+    /// };
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    /// );
+    /// pub_sub_client.on_message(client::on_message);
+    /// pub_sub_client.subscribe("test".to_string());
+    /// ```
     pub async fn subscribe(&mut self, topic: String) -> Result<()> {
         let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
         trace!("msg: {:?}", msg);
@@ -237,7 +366,7 @@ impl Client {
         }
     }
 
-    pub async fn write(&mut self, message: Vec<u8>) -> Result<()> {
+    async fn write(&mut self, message: Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
             stream.write_all(message).await?;
             Ok(())
@@ -246,7 +375,7 @@ impl Client {
         }
     }
 
-    pub async fn read(&mut self, message: &mut [u8]) -> Result<()> {
+    async fn read(&mut self, message: &mut [u8]) -> Result<()> {
         if let Some(stream) = &mut self.stream {
             let size = stream.read(message).await?;
             trace!("read: {} bytes", size);
@@ -255,7 +384,7 @@ impl Client {
             bail!("client is not connected yet");
         }
     }
-    pub async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<()> {
+    async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
             let size = stream.read_buf(message).await?;
             trace!("read: {} bytes", size);
@@ -265,7 +394,7 @@ impl Client {
         }
     }
 
-    pub async fn read_message(&mut self) -> Result<message::Msg> {
+    async fn read_message(&mut self) -> Result<message::Msg> {
         if let Some(stream) = &mut self.stream {
             stream.read_message().await
         } else {
