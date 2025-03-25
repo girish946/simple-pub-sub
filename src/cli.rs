@@ -80,4 +80,6 @@ pub enum Commands {
         /// message to be published
         message: Option<String>,
     },
+    /// bash completions
+    Completions { shell: String },
 }
