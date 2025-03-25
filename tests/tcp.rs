@@ -24,7 +24,7 @@ mod tests {
         env_logger::init();
 
         let server = tokio::spawn(start_serever());
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
@@ -47,7 +47,7 @@ mod tests {
             .await;
         info!("{:?}", result);
 
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
         assert!(result.is_ok());
         std::mem::drop(server);
     }
@@ -57,7 +57,7 @@ mod tests {
         // std::env::set_var("RUST_LOG", "trace");
 
         let server = tokio::spawn(start_serever());
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6480,
@@ -99,7 +99,7 @@ mod tests {
             )
             .await;
 
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
 
         std::mem::drop(server);
         std::mem::drop(subscribe_client);
