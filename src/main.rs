@@ -1,6 +1,6 @@
 pub mod cli;
 use crate::cli::{Cli, ClientType, Commands, LogLevel, ServerType};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use log::{error, info};
 use simple_pub_sub::server::ServerTrait as _;
 use simple_pub_sub::{client, server};
@@ -152,6 +152,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
+        Commands::Completions { shell } => {
+            completions(shell);
+        }
     }
     Ok(())
+}
+
+fn completions(shell: &str) {
+    use clap::CommandFactory;
+    let mut cmd = Cli::command();
+    let man = clap_mangen::Man::new(cmd.clone());
+    let mut buffer: Vec<u8> = Default::default();
+    match man.render(&mut buffer) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error while generating the completions:{}", e);
+        }
+    };
+
+    let shell_ = match clap_complete::Shell::from_str(&shell, true) {
+        Ok(shell) => shell,
+        Err(_) => {
+            eprintln!("Shell not supported {}", shell);
+            return;
+        }
+    };
+    let bin_name = "simple-pub-sub";
+    clap_complete::generate(shell_, &mut cmd, bin_name, &mut std::io::stdout());
 }
