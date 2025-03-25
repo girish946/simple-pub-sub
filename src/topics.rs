@@ -24,11 +24,13 @@ impl TopicMap {
                 .map(|(k, v)| format!("{}: {}", k, v.len()))
                 .collect();
             json!({topic: v}).to_string()
-        } else if self.map.contains_key(&topic) {
-            v = vec![format!("{}", self.map.get(&topic).unwrap().len())];
-            json!({topic: v}).to_string()
         } else {
-            "".to_string()
+            let clients = match self.map.get(&topic) {
+                Some(clients) => clients.len(),
+                None => 0,
+            };
+            v = vec![format!("{}", clients)];
+            json!({topic: v}).to_string()
         }
     }
     /// Adds a channel to the map.
