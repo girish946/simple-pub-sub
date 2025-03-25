@@ -1,6 +1,6 @@
 mod client_handler;
 use crate::topics;
-use log::error;
+use anyhow::Result;
 use log::info;
 use std::fs::File;
 use std::io::Read;
@@ -9,7 +9,7 @@ use tokio::net::UnixListener;
 use tokio_native_tls::native_tls::{Identity, TlsAcceptor};
 
 pub trait ServerTrait {
-    fn start(&self) -> impl std::future::Future<Output = Result<(), tokio::io::Error>> + Send;
+    fn start(&self) -> impl std::future::Future<Output = Result<()>> + Send;
 }
 pub struct Tcp {
     pub host: String,
@@ -46,7 +46,7 @@ impl ServerTrait for Tcp {
     ///   let _ = server.start().await;
     /// }
     /// ```
-    async fn start(&self) -> Result<(), tokio::io::Error> {
+    async fn start(&self) -> Result<()> {
         if let Some(cert) = &self.cert {
             start_tls_server(
                 self.host.clone(),
@@ -76,7 +76,7 @@ impl ServerTrait for Unix {
     /// });
     /// let result = server.start();
     ///```
-    async fn start(&self) -> Result<(), tokio::io::Error> {
+    async fn start(&self) -> Result<()> {
         start_unix_server(self.path.clone(), self.capacity).await
     }
 }
@@ -126,7 +126,7 @@ impl ServerTrait for ServerType {
     /// });
     /// let result = server.start();
     ///```
-    async fn start(&self) -> Result<(), tokio::io::Error> {
+    async fn start(&self) -> Result<()> {
         match self {
             ServerType::Tcp(tcp) => tcp.start().await,
             ServerType::Unix(unix) => unix.start().await,
@@ -139,7 +139,7 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn start(&self) -> Result<(), tokio::io::Error> {
+    pub async fn start(&self) -> Result<()> {
         self.server_type.start().await
     }
 }
@@ -151,81 +151,45 @@ async fn start_tls_server(
     cert: String,
     cert_password: Option<String>,
     capacity: usize,
-) -> Result<(), tokio::io::Error> {
+) -> Result<()> {
     // Load TLS identity (certificate and private key)
-
-    let mut file = match File::open(&cert) {
-        Ok(file) => file,
-        Err(e) => {
-            error!("Could not open identity file: {}: {}", cert, e);
-            return Err(tokio::io::Error::new(
-                tokio::io::ErrorKind::Other,
-                "Could not open identity file",
-            ));
-        }
-    };
+    let mut file = File::open(&cert)?;
     let mut identity_vec = vec![];
     file.read_to_end(&mut identity_vec)?;
 
     let identity: Identity;
     if let Some(cert_password) = cert_password {
-        identity = match Identity::from_pkcs12(&identity_vec, cert_password.as_str()) {
-            Ok(identity) => identity,
-            Err(e) => {
-                error!("Could not parse identity file: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
+        identity = Identity::from_pkcs12(&identity_vec, cert_password.as_str())?;
     } else {
-        identity = match Identity::from_pkcs12(&identity_vec, "") {
-            Ok(identity) => identity,
-            Err(e) => {
-                error!("Could not parse identity file: {}", e);
-                return Err(tokio::io::Error::new(tokio::io::ErrorKind::Other, e));
-            }
-        };
+        identity = Identity::from_pkcs12(&identity_vec, "")?;
     }
 
-    let acceptor = TlsAcceptor::builder(identity)
-        .build()
-        .expect("Cannot create TLS acceptor");
+    let acceptor = TlsAcceptor::builder(identity).build()?;
     let acceptor = tokio_native_tls::TlsAcceptor::from(acceptor);
 
     // Bind TCP listener
-    let listener = TcpListener::bind(format!("{host}:{port}"))
-        .await
-        .expect("Cannot bind to address");
+    let listener = TcpListener::bind(format!("{host}:{port}")).await?;
 
     println!("Server listening on port 4433");
     let tx = topics::get_global_broadcaster(capacity);
-
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
-
     loop {
         let (stream, addr) = listener.accept().await?;
         println!("Accepted connection from {:?}", addr);
         let acceptor = acceptor.clone();
-        let tls_stream = match acceptor.accept(stream).await {
-            Ok(stream) => stream,
-            Err(e) => {
-                error!("Could not accept TLS connection: {}", e);
-                continue;
-            }
-        };
+        let tls_stream = acceptor.accept(stream).await?;
         client_handler::handle_client(tls_stream, tx.clone()).await;
     }
 }
 
 /// Starts a tcp server on the given address
-async fn start_tcp_server(addr: String, capacity: usize) -> Result<(), tokio::io::Error> {
+async fn start_tcp_server(addr: String, capacity: usize) -> Result<()> {
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on: {}", addr);
     info!("Getting global broadcaster");
 
     let tx = topics::get_global_broadcaster(capacity);
-
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
-
     loop {
         let (socket, addr) = listener.accept().await?;
         info!("Addr is: {addr}");
@@ -234,7 +198,7 @@ async fn start_tcp_server(addr: String, capacity: usize) -> Result<(), tokio::io
 }
 
 /// Starts a unix server on the given path
-async fn start_unix_server(path: String, capacity: usize) -> Result<(), tokio::io::Error> {
+async fn start_unix_server(path: String, capacity: usize) -> Result<()> {
     if std::path::Path::new(&path).exists() {
         std::fs::remove_file(path.clone())?;
     }

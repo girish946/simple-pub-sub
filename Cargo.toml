@@ -37,6 +37,7 @@ tokio-native-tls = "0.3"
 native-tls = "0.2"
 tokio-stream = "0.1"
 anyhow = "1.0.97"
+thiserror = "2.0.12"
 
 [build-dependencies]
 clap = { version = "4.4.11", features = ["derive", "cargo"] }
