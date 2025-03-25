@@ -119,10 +119,10 @@ pub struct Client {
 pub fn on_message(topic: String, message: Vec<u8>) {
     match String::from_utf8(message.clone()) {
         Ok(msg_str) => {
-            info!("topic: {} message: {}", topic, msg_str);
+            info!("Topic: {} message: {}", topic, msg_str);
         }
         Err(_) => {
-            info!("topic: {} message: {:?}", topic, message);
+            info!("Topic: {} message: {:?}", topic, message);
         }
     };
 }
@@ -246,7 +246,7 @@ impl Client {
     ///   );
     ///   // connect the client.
     ///   let _ = client.connect();
-    ///   let msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
+    ///   let msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
     ///   client.post(msg).await.unwrap();
     /// }
     /// ```
@@ -255,11 +255,11 @@ impl Client {
         let mut response_message_buffer: Vec<u8>;
         response_message_buffer = vec![0; 8];
         self.read(&mut response_message_buffer).await?;
-        trace!("buf: {:?}", response_message_buffer);
+        trace!("Buf: {:?}", response_message_buffer);
         let response_header = Header::try_from(response_message_buffer.clone())?;
-        trace!("resp: {:?}", response_header);
+        trace!("Resp: {:?}", response_header);
         let mut response_body = Vec::with_capacity(response_header.message_length as usize);
-        trace!("reading remaining bytes");
+        trace!("Reading remaining bytes");
         self.read_buf(&mut response_body).await?;
         response_message_buffer.extend(response_body);
         Ok(response_message_buffer)
@@ -284,16 +284,16 @@ impl Client {
     ///   // subscribe to the given topic.
     ///   client
     ///       .publish(
-    ///           "abc".to_string(),
-    ///           "test message".to_string().into_bytes().to_vec(),
+    ///           "Abc".to_string(),
+    ///           "Test message".to_string().into_bytes().to_vec(),
     ///       ).await.unwrap();
     /// }
     /// ```
     pub async fn publish(&mut self, topic: String, message: Vec<u8>) -> Result<()> {
         let msg: Msg = Msg::new(PktType::PUBLISH, topic, Some(message));
-        trace!("msg: {:?}", msg);
+        trace!("Msg: {:?}", msg);
         let buf = self.post(msg).await?;
-        trace!("the raw buffer is: {:?}", buf);
+        trace!("The raw buffer is: {:?}", buf);
         let resp_: Header = Header::try_from(buf)?;
         trace!("{:?}", resp_);
         Ok(())
@@ -314,7 +314,7 @@ impl Client {
     ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
     ///   );
     ///   pub_sub_client.connect().await;
-    ///   pub_sub_client.query("test".to_string());
+    ///   pub_sub_client.query("Test".to_string());
     /// }
     /// ```
     pub async fn query(&mut self, topic: String) -> Result<String> {
@@ -323,7 +323,7 @@ impl Client {
             topic,
             Some(" ".to_string().as_bytes().to_vec()),
         );
-        trace!("msg: {:?}", msg);
+        trace!("Msg: {:?}", msg);
 
         self.write(msg.bytes()).await?;
         let msg = self.read_message().await?;
@@ -344,11 +344,11 @@ impl Client {
     ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
     /// );
     /// pub_sub_client.on_message(client::on_message);
-    /// pub_sub_client.subscribe("test".to_string());
+    /// pub_sub_client.subscribe("Test".to_string());
     /// ```
     pub async fn subscribe(&mut self, topic: String) -> Result<()> {
         let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
-        trace!("msg: {:?}", msg);
+        trace!("Msg: {:?}", msg);
         self.write(msg.bytes()).await?;
         if let Some(callback) = self.callback {
             loop {
@@ -362,7 +362,7 @@ impl Client {
                 }
             }
         } else {
-            bail!("no callback function is set");
+            bail!("No callback function is set");
         }
     }
 
@@ -371,26 +371,26 @@ impl Client {
             stream.write_all(message).await?;
             Ok(())
         } else {
-            bail!("client is not connected yet");
+            bail!("Client is not connected yet");
         }
     }
 
     async fn read(&mut self, message: &mut [u8]) -> Result<()> {
         if let Some(stream) = &mut self.stream {
             let size = stream.read(message).await?;
-            trace!("read: {} bytes", size);
+            trace!("Read: {} bytes", size);
             Ok(())
         } else {
-            bail!("client is not connected yet");
+            bail!("Client is not connected yet");
         }
     }
     async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
             let size = stream.read_buf(message).await?;
-            trace!("read: {} bytes", size);
+            trace!("Read: {} bytes", size);
             Ok(())
         } else {
-            bail!("client is not connected yet");
+            bail!("Client is not connected yet");
         }
     }
 
@@ -398,7 +398,7 @@ impl Client {
         if let Some(stream) = &mut self.stream {
             stream.read_message().await
         } else {
-            bail!("client is not connected yet");
+            bail!("Client is not connected yet");
         }
     }
 }

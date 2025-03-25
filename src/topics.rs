@@ -50,7 +50,7 @@ impl TopicMap {
             if let Some(channels) = self.map.get_mut(&topic) {
                 channels.remove(&client_id);
             }
-            trace!("channels: {:?}", self.map);
+            trace!("Channels: {:?}", self.map);
         }
     }
 
@@ -65,22 +65,22 @@ impl TopicMap {
             let dead_channels = channels
                 .iter()
                 .map(|(client_id, channel)| {
-                    info!("sending msg to the {}", client_id);
+                    info!("Sending msg to the {}", client_id);
                     match channel.send(msg.clone()) {
                         Ok(_n) => "".to_string(),
                         Err(e) => {
                             error!(
-                                "error occurred: {} while sending the message to the channel {}",
+                                "Error occurred: {} while sending the message to the channel {}",
                                 e.to_string(),
                                 client_id
                             );
-                            error!("cleaning up");
+                            error!("Cleaning up");
                             client_id.clone()
                         }
                     }
                 })
                 .collect::<Vec<_>>();
-            info!("dead_channels: {:?}", dead_channels);
+            info!("Dead_channels: {:?}", dead_channels);
             let _ = dead_channels
                 .iter()
                 .map(|client_id| {
@@ -93,7 +93,7 @@ impl TopicMap {
 
 /// returns a global broadcaster.
 pub(crate) fn get_global_broadcaster(capacity: usize) -> tokio::sync::broadcast::Sender<Msg> {
-    info!("creating broadcast channel");
+    info!("Creating broadcast channel");
     let (glob_tx, _) = tokio::sync::broadcast::channel(capacity);
     glob_tx
 }
@@ -108,10 +108,10 @@ pub(crate) async fn topic_manager(chan: Sender<Msg>) {
         match rx.recv().await {
             Ok(msg) => {
                 if !msg.topic.is_empty() {
-                    info!("topic received: {}", msg.topic);
+                    info!("Topic received: {}", msg.topic);
                     match msg.header.pkt_type {
                         PktType::PUBLISH => {
-                            trace!("publishing to map:{:?}", map);
+                            trace!("Publishing to map:{:?}", map);
                             map.publish(msg).await;
                         }
                         PktType::SUBSCRIBE => {
@@ -120,32 +120,32 @@ pub(crate) async fn topic_manager(chan: Sender<Msg>) {
                                 msg.client_id.unwrap(),
                                 msg.channel.unwrap(),
                             );
-                            trace!("map: {:?}", map);
+                            trace!("Map: {:?}", map);
                         }
                         PktType::UNSUBSCRIBE => {
-                            info!("unsubscribing:");
+                            info!("Unsubscribing:");
                             map.remove_channel(msg.topic, msg.client_id.unwrap());
                         }
                         PktType::QUERY => {
-                            info!("querying");
+                            info!("Querying");
                             let query_resp = map.query(msg.topic.clone());
-                            info!("query_resp: {}", query_resp.clone());
+                            info!("Query_resp: {}", query_resp.clone());
                             let resp_msg = match msg.response_msg(query_resp.into_bytes()) {
                                 Ok(rm) => rm,
                                 Err(e) => {
                                     error!(
-                                        "error while getting the response to the query message: {}",
+                                        "Error while getting the response to the query message: {}",
                                         e.to_string()
                                     );
                                     continue;
                                 }
                             };
-                            info!("generated query resp: {:?}", resp_msg);
+                            info!("Generated query resp: {:?}", resp_msg);
                             match msg.channel.unwrap().send(resp_msg) {
                                 Ok(n) => n,
                                 Err(e) => {
                                     error!(
-                                        "error while sending the query response: {}",
+                                        "Error while sending the query response: {}",
                                         e.to_string()
                                     );
                                     0
@@ -158,7 +158,7 @@ pub(crate) async fn topic_manager(chan: Sender<Msg>) {
             }
             Err(e) => {
                 error!(
-                    "error occurred while receiving the topic: {}",
+                    "Error occurred while receiving the topic: {}",
                     e.to_string()
                 );
                 // "".to_string()
