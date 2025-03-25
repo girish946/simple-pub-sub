@@ -15,7 +15,7 @@ pub struct TopicMap {
 }
 impl TopicMap {
     /// Returns the number of connected clients for a given topic.
-    pub(crate) fn query(&self, topic: String) -> String {
+    fn query(&self, topic: String) -> String {
         let v: Vec<String>;
         if topic == "*" {
             v = self
@@ -34,7 +34,7 @@ impl TopicMap {
         }
     }
     /// Adds a channel to the map.
-    pub(crate) fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
+    fn add_channel(&mut self, topic: String, client_id: String, channel: Sender<Msg>) {
         if self.map.contains_key(&topic.clone()) {
             if let Some(channels) = self.map.get_mut(&topic.clone()) {
                 channels.entry(client_id).or_insert(channel);
@@ -47,7 +47,7 @@ impl TopicMap {
         }
     }
     /// Removes a channel from the map.
-    pub(crate) fn remove_channel(&mut self, topic: String, client_id: String) {
+    fn remove_channel(&mut self, topic: String, client_id: String) {
         if self.map.contains_key(&topic) {
             if let Some(channels) = self.map.get_mut(&topic) {
                 channels.remove(&client_id);
@@ -57,7 +57,7 @@ impl TopicMap {
     }
 
     /// Publishes the message to the channels.
-    pub(crate) async fn publish(&mut self, msg: Msg) {
+    async fn publish(&mut self, msg: Msg) {
         if !self.map.contains_key(&msg.topic) {
             return;
         }
@@ -102,6 +102,8 @@ pub(crate) fn get_global_broadcaster(capacity: usize) -> tokio::sync::broadcast:
 
 /// Handles the incoming and out-going messages for each topic.
 pub(crate) async fn topic_manager(chan: Sender<Msg>) {
+    // NOTE: this MSG must always have the client_id and channel
+    // it should not be None
     let mut map: TopicMap = TopicMap {
         map: BTreeMap::new(),
     };
