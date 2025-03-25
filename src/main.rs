@@ -152,14 +152,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
-        Commands::Completions { shell } => {
-            completions(shell);
+        Commands::Completion { shell } => {
+            completion(shell);
         }
     }
     Ok(())
 }
 
-fn completions(shell: &str) {
+fn completion(shell: &str) {
     use clap::CommandFactory;
     let mut cmd = Cli::command();
     let man = clap_mangen::Man::new(cmd.clone());
@@ -171,7 +171,7 @@ fn completions(shell: &str) {
         }
     };
 
-    let shell_ = match clap_complete::Shell::from_str(&shell, true) {
+    let shell = match clap_complete::Shell::from_str(&shell, true) {
         Ok(shell) => shell,
         Err(_) => {
             eprintln!("Shell not supported {}", shell);
@@ -179,5 +179,5 @@ fn completions(shell: &str) {
         }
     };
     let bin_name = "simple-pub-sub";
-    clap_complete::generate(shell_, &mut cmd, bin_name, &mut std::io::stdout());
+    clap_complete::generate(shell, &mut cmd, bin_name, &mut std::io::stdout());
 }
