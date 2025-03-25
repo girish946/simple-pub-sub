@@ -25,7 +25,7 @@ mod tests {
         let path = "/tmp/sample2.sock".to_string();
 
         let server = tokio::spawn(start_serever(path.clone()));
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubUnixClient { path };
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
@@ -43,7 +43,7 @@ mod tests {
             .await;
         info!("{:?}", result);
         std::mem::drop(server);
-        sleep(Duration::from_millis(5000)).await;
+        sleep(Duration::from_millis(500)).await;
         assert!(result.is_ok());
     }
 
@@ -53,7 +53,7 @@ mod tests {
         let path = "/tmp/sock1.sock".to_string();
 
         let server = tokio::spawn(start_serever(path.clone()));
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubUnixClient { path: path.clone() };
         let client_type_pub = simple_pub_sub::client::PubSubUnixClient { path };
         // initialize the client.
@@ -86,6 +86,6 @@ mod tests {
 
         std::mem::drop(server);
         std::mem::drop(subscribe_client);
-        sleep(Duration::from_millis(5000)).await;
+        sleep(Duration::from_millis(500)).await;
     }
 }
