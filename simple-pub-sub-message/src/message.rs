@@ -23,7 +23,7 @@ impl Msg {
     /// ```
     /// use simple_pub_sub_message::message::Msg;
     /// use simple_pub_sub_message::PktType;
-    /// let msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
+    /// let msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
     /// ```
     pub fn new(pkt_type: PktType, topic: String, message: Option<Vec<u8>>) -> Msg {
         let msg: Vec<u8> = message.unwrap_or_default();
@@ -42,7 +42,7 @@ impl Msg {
     /// use simple_pub_sub_message::message::Msg;
     /// use simple_pub_sub_message::PktType;
     /// use tokio::sync::broadcast::Sender;
-    /// let mut msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
+    /// let mut msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
     /// let chan: tokio::sync::broadcast::Sender<Msg> =
     ///   tokio::sync::broadcast::Sender::new(1);
     /// msg.channel(chan)
@@ -56,7 +56,7 @@ impl Msg {
     /// use simple_pub_sub_message::message::Msg;
     /// use simple_pub_sub_message::PktType;
     /// use uuid;
-    /// let mut msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
+    /// let mut msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
     /// let client_id = uuid::Uuid::new_v4().to_string();
     /// msg.client_id(client_id)
     /// ```
@@ -68,7 +68,7 @@ impl Msg {
     /// ```
     /// use simple_pub_sub_message::message::Msg;
     /// use simple_pub_sub_message::PktType;
-    /// let mut msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
+    /// let mut msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
     /// let response_msg = msg.response_msg(vec![]);
     /// ```
     pub fn response_msg(&self, message: Vec<u8>) -> Result<Msg> {
@@ -87,14 +87,14 @@ impl Msg {
     ///```
     /// use simple_pub_sub_message::message::Msg;
     /// use simple_pub_sub_message::PktType;
-    /// let mut msg = Msg::new(PktType::PUBLISH, "test".to_string(), Some(b"the message".to_vec()));
+    /// let mut msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
     /// let bytes = msg.bytes();
     /// ```
     pub fn bytes(&self) -> Vec<u8> {
         let mut buffer: Vec<u8> = self.header.bytes().to_vec();
         buffer.extend(self.topic.as_bytes().to_vec());
         buffer.extend(self.message.clone());
-        trace!("the generated buffer is: {:?}", buffer);
+        trace!("The generated buffer is: {:?}", buffer);
         buffer
     }
 }
@@ -104,7 +104,7 @@ impl Msg {
 /// use simple_pub_sub_message::message::Msg;
 /// use simple_pub_sub_message::PktType;
 /// use simple_pub_sub_message::message::get_msg_response;
-/// let mut msg = Msg::new(PktType::PUBLISHACK, "test".to_string(), Some(b"".to_vec()));
+/// let mut msg = Msg::new(PktType::PUBLISHACK, "Test".to_string(), Some(b"".to_vec()));
 /// let response_msg = get_msg_response(msg);
 /// ```
 
@@ -142,7 +142,7 @@ impl TryFrom<&[u8]> for Msg {
         let message_end: usize = ((8 + header.topic_length) as u16 + header.message_length).into();
 
         if bytes.len() < message_end {
-            bail!("invalid Msg length");
+            bail!("Invalid Msg length");
         }
         let message = bytes[(8 + header.topic_length).into()..message_end].to_vec();
         Ok(Msg {

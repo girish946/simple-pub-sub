@@ -14,7 +14,7 @@ where
     let mut pkt_buf: Vec<u8>;
     pkt_buf = vec![0; 512];
 
-    trace!("the size of buffer is: {}", pkt_buf.len());
+    trace!("The size of buffer is: {}", pkt_buf.len());
     let n = s
         .read(&mut pkt_buf)
         .await
@@ -22,7 +22,7 @@ where
     if n == 0 {
         bail!("Error while reading data from the socket");
     }
-    debug!("incoming pkt: {:?}", pkt_buf[..8].to_vec().clone());
+    debug!("Incoming pkt: {:?}", pkt_buf[..8].to_vec().clone());
     let header: Header = Header::try_from(&pkt_buf[..8])?;
     debug!("{:?}", header);
 
@@ -32,11 +32,11 @@ where
 
     if 504 - u16::from(header.topic_length) < header.message_length {
         let bytes_remaining = header.message_length - (504 - u16::from(header.topic_length));
-        trace!("the message is bigger, reading the remaining chunk");
+        trace!("The message is bigger, reading the remaining chunk");
         trace!("{} bytes remaining", bytes_remaining);
 
         let mut buf: Vec<u8> = Vec::with_capacity(bytes_remaining.into());
-        trace!("reading next bytes");
+        trace!("Reading next bytes");
 
         let n = s.read_buf(&mut buf).await?;
         if n == 0 {

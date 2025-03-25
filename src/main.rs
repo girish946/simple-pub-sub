@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     None => 6480,
                 };
                 let addr = format!("{server}:{port}");
-                info!("connecting to: {addr}");
+                info!("Connecting to: {addr}");
                 client_ = client::PubSubClient::Tcp(client::PubSubTcpClient {
                     server: server.clone(),
                     port,
@@ -107,7 +107,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     cert_password,
                 });
             } else {
-                return Err("socket type not supported".into());
+                return Err("Socket type not supported".into());
             }
 
             let mut client = client::Client::new(client_);

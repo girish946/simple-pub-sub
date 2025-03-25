@@ -31,12 +31,12 @@ where
                         Ok(mut m) => {
                             m.client_id(client_id.clone());
                             if !m.topic.is_empty() {
-                                info!("topic: {}", m.topic);
+                                info!("Topic: {}", m.topic);
                                 match m.header.pkt_type {
                                     PktType::PUBLISH | PktType::SUBSCRIBE | PktType::UNSUBSCRIBE | PktType::QUERY => {
                                         m.channel(client_chan.clone());
                                         if let Err(e) = chan.send(m.clone()) {
-                                            error!("error while sending message: {:?}", e);
+                                            error!("Error while sending message: {:?}", e);
                                         }
                                     },
                                     _ => {}
@@ -45,24 +45,24 @@ where
                             if m.header.pkt_type != PktType::QUERY {
                                 if let Ok(v) = message::get_msg_response(m.clone()) {
                                     if let Err(e) = socket.write_all(&v).await {
-                                        error!("could not write the data to the socket: {:?}", e);
+                                        error!("Could not write the data to the socket: {:?}", e);
                                     }
                                 } else {
-                                    error!("error while writing the data to the socket");
+                                    error!("Error while writing the data to the socket");
                                 }
                             }
                         },
                         Err(_e) => {
-                            warn!("client disconnected: {}", client_id);
+                            warn!("Client disconnected: {}", client_id);
                             return;
                         }
                     }
                 },
                 chan_msg = read_channel_msg(client_chan.clone()) => {
                     if let Ok(m) = chan_msg {
-                        info!("message received: {:?}, {}", m.topic.clone(), m.message.len());
+                        info!("Message received: {:?}, {}", m.topic.clone(), m.message.len());
                         if let Err(e) = socket.write_all(&m.bytes()).await {
-                            error!("failed to write data to socket: {:?}", e);
+                            error!("Failed to write data to socket: {:?}", e);
                         }
                     }
                 }
