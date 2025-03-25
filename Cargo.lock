@@ -706,6 +706,7 @@ dependencies = [
  "serde",
  "serde_json",
  "simple-pub-sub-message",
+ "thiserror",
  "tokio",
  "tokio-native-tls",
  "tokio-stream",

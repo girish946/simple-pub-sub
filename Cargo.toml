@@ -38,6 +38,7 @@ native-tls = "0.2"
 tokio-stream = "0.1"
 openssl = "0.10.66"
 anyhow = "1.0.97"
+thiserror = "2.0.12"
 
 [build-dependencies]
 clap = { version = "4.4.11", features = ["derive", "cargo"] }
