@@ -14,6 +14,8 @@ So it's a 8 byte header followed by the topic and message.
 
 To subscribe
 
+### Client
+
 ```rust
 use simple-pub-sub
 
@@ -62,6 +64,23 @@ async fn main() -> Result<(), String> {
         )
         .await;
     Ok(())
+}
+```
+
+### Server
+
+```rust
+use simple_pub_sub;
+async fn main(){
+  let server = simple_pub_sub::server::ServerType::Tcp(
+      simple_pub_sub::server::Tcp {
+        host: "localhost".to_string(),
+        port: 6480,
+        cert: None,
+        cert_password: None,
+        capacity: 1024,
+      });
+  server.start().await;
 }
 ```
 
@@ -168,7 +187,6 @@ Supported shells: `bash`, `zsh`, `fish`, `Elvish`, `Powershell`
 To add the shell completions, run
 
 ```bash
-# 
 simple-pub-sub completion <shell> 
 ```
 
