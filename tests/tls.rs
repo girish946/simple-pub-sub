@@ -91,7 +91,7 @@ mod tests {
             )
             .await;
 
-        sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(5000)).await;
         assert!(result.is_ok());
         std::mem::drop(server);
     }
@@ -126,16 +126,16 @@ mod tests {
         // connect the client.
         let _ = client_sub.connect().await;
         let _ = client_pub.connect().await;
-        pub fn on_msg(topic: String, message: Vec<u8>) {
+
+        let on_msg = |topic: String, message: &[u8]| {
             println!("topic: {} message: {:?}", topic, message);
             assert_eq!(topic, "abc");
-        }
+        };
 
-        client_sub.on_message(on_msg);
         // connect the client.
         let _ = client_sub.connect().await;
         // subscribe to the given topic.
-        let subscribe_client = client_sub.subscribe("abc".to_string());
+        let subscribe_client = client_sub.subscribe("abc".to_string(), on_msg);
         let _ = client_pub
             .publish(
                 "abc".to_string(),

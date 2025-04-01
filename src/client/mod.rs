@@ -104,15 +104,11 @@ impl StreamType {
     }
 }
 
-/// on_message callback function
-type Callback = fn(String, Vec<u8>);
-
 /// Simple pub sub Client
 #[derive(Debug)]
 pub struct Client {
     pub client_type: PubSubClient,
     stream: Option<StreamType>,
-    callback: Option<Callback>,
 }
 
 /// default implementation for callback function
@@ -146,27 +142,7 @@ impl Client {
         Client {
             client_type,
             stream: None,
-            callback: None,
         }
-    }
-
-    /// Sets the on_message callback function
-    /// ```
-    /// use simple_pub_sub::client::{self, PubSubClient, Client};
-    /// let client_type = simple_pub_sub::client::PubSubTcpClient {
-    ///        server: "localhost".to_string(),
-    ///        port: 6480,
-    ///        cert: None,
-    ///        cert_password: None,
-    /// };
-    /// // initialize the client.
-    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
-    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
-    /// );
-    /// pub_sub_client.on_message(client::on_message);
-    /// ```
-    pub fn on_message(&mut self, callback: Callback) {
-        self.callback = Some(callback)
     }
 
     async fn connect_tls(&mut self, url: String, cert: String) -> Result<()> {
@@ -343,28 +319,39 @@ impl Client {
     /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
     ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
     /// );
-    /// pub_sub_client.on_message(client::on_message);
-    /// pub_sub_client.subscribe("Test".to_string());
+    /// pub_sub_client.subscribe("Test".to_string(), |topic, message|{
+    ///     println!("topic:{:?} message: {:?}", topic, message);
+    /// });
     /// ```
-    pub async fn subscribe(&mut self, topic: String) -> Result<()> {
+    pub async fn subscribe<F>(&mut self, topic: String, mut callback: F) -> Result<()>
+    where
+        F: FnMut(String, &[u8]) + Send + 'static,
+    {
         let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
         trace!("Msg: {:?}", msg);
         self.write(msg.bytes()).await?;
-        if let Some(callback) = self.callback {
-            loop {
-                match self.read_message().await {
-                    Ok(m) => {
-                        callback(m.topic, m.message);
-                    }
-                    Err(e) => {
-                        return Err(e);
-                    }
-                }
+        loop {
+            match self.read_message().await {
+                Ok(m) => callback(m.topic, m.message.as_slice()),
+                Err(e) => return Err(e),
             }
-        } else {
-            bail!("No callback function is set");
         }
     }
+
+    // pub async fn subscribe(
+    //     &mut self,
+    //     topic: String,
+    //     mut callback: Callback,
+    //     queue: Arc<Vec<Vec<u8>>>,
+    // ) -> Result<()> {
+    //     let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
+    //     trace!("Msg: {:?}", msg);
+    //     self.write(msg.bytes()).await?;
+    //     match self.read_message().await {
+    //         Ok(m) => Ok(callback(m.topic, m.message, queue)),
+    //         Err(e) => return Err(e),
+    //     }
+    // }
 
     async fn write(&mut self, message: Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
@@ -394,7 +381,7 @@ impl Client {
         }
     }
 
-    async fn read_message(&mut self) -> Result<message::Msg> {
+    pub async fn read_message(&mut self) -> Result<message::Msg> {
         if let Some(stream) = &mut self.stream {
             stream.read_message().await
         } else {

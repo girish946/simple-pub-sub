@@ -1,7 +1,3 @@
-// define the on_message function (callback).
-pub fn on_msg(topic: String, message: Vec<u8>) {
-    println!("topic: {} message: {:?}", topic, message)
-}
 #[tokio::main]
 async fn main() -> Result<(), String> {
     let client_type = simple_pub_sub::client::PubSubTcpClient {
@@ -14,11 +10,15 @@ async fn main() -> Result<(), String> {
     // initialize the client.
     let mut client =
         simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
-    // set the callback function.
-    client.on_message(on_msg);
+
+    let on_msg = |topic: String, message: &[u8]| {
+        println!("topic: {} message: {:?}", topic, message);
+        assert_eq!(topic, "abc");
+    };
+
     // connect the client.
     let _ = client.connect().await;
     // subscribe to the given topic.
-    let _ = client.subscribe("abc".to_string()).await;
+    let _ = client.subscribe("abc".to_string(), on_msg).await;
     Ok(())
 }
