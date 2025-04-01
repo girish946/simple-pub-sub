@@ -120,7 +120,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
             };
 
-            client.on_message(client::on_message);
+            //client.on_message(client::on_message);
 
             match client_type {
                 ClientType::Publish => {
@@ -137,7 +137,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 }
                 ClientType::Subscribe => {
                     info!("Subscribing to topic '{}'", topic);
-                    let _ = client.subscribe(topic.clone()).await;
+
+                    let callback_fn = |topic: String, message: &[u8]| {
+                        let msg_str = String::from_utf8(message.to_vec()).unwrap_or("".to_string());
+                        println!("{}: {}", topic, msg_str);
+                    };
+                    let _ = client.subscribe(topic.clone(), Box::new(callback_fn)).await;
                 }
                 ClientType::Query => {
                     info!("Querying topic '{}'", topic);
