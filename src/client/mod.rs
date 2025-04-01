@@ -338,21 +338,6 @@ impl Client {
         }
     }
 
-    // pub async fn subscribe(
-    //     &mut self,
-    //     topic: String,
-    //     mut callback: Callback,
-    //     queue: Arc<Vec<Vec<u8>>>,
-    // ) -> Result<()> {
-    //     let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
-    //     trace!("Msg: {:?}", msg);
-    //     self.write(msg.bytes()).await?;
-    //     match self.read_message().await {
-    //         Ok(m) => Ok(callback(m.topic, m.message, queue)),
-    //         Err(e) => return Err(e),
-    //     }
-    // }
-
     async fn write(&mut self, message: Vec<u8>) -> Result<()> {
         if let Some(stream) = &mut self.stream {
             stream.write_all(message).await?;
