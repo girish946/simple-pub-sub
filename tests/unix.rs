@@ -27,9 +27,16 @@ mod tests {
         let server = tokio::spawn(start_serever(path.clone()));
         sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubUnixClient { path };
+
+        let callback_fn = |topic: String, message: &[u8]| {
+            println!("topic:{:?} message: {:?}", topic, message);
+            assert_eq!(topic, "abc");
+        };
+
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Unix(client_type),
+            callback_fn,
         );
         // connect the client.
         let _ = client.connect().await;
@@ -56,27 +63,31 @@ mod tests {
         sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubUnixClient { path: path.clone() };
         let client_type_pub = simple_pub_sub::client::PubSubUnixClient { path };
+
+        let callback_fn = |topic: String, message: &[u8]| {
+            println!("topic:{:?} message: {:?}", topic, message);
+            assert_eq!(topic, "abc");
+        };
+
         // initialize the client.
         let mut client_sub = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Unix(client_type),
+            callback_fn,
         );
         let mut client_pub = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Unix(client_type_pub),
+            callback_fn,
         );
 
         // connect the client.
-        let _ = client_sub.connect().await;
-        let _ = client_pub.connect().await;
-
-        let on_msg = |topic: String, message: &[u8]| {
-            println!("topic: {} message: {:?}", topic, message);
-            assert_eq!(topic, "abc");
-        };
+        client_sub.connect().await.unwrap();
+        client_pub.connect().await.unwrap();
 
         // connect the client.
         let _ = client_sub.connect().await;
         // subscribe to the given topic.
-        let subscribe_client = client_sub.subscribe("abc".to_string(), on_msg);
+        client_sub.subscribe("abc".to_string()).await.unwrap();
+        let subscribe_client = client_sub.run();
 
         let _ = client_pub
             .publish(

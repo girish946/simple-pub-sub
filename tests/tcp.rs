@@ -2,11 +2,13 @@ use tokio::time::{sleep, Duration};
 #[cfg(test)]
 mod tests {
 
+    use anyhow::Result;
+
     use super::*;
     use log::info;
     use simple_pub_sub::server::ServerTrait as _;
 
-    async fn start_serever() {
+    async fn start_serever() -> Result<()> {
         println!("server started");
         let server = simple_pub_sub::server::ServerType::Tcp(simple_pub_sub::server::Tcp {
             host: "localhost".to_string(),
@@ -15,7 +17,7 @@ mod tests {
             cert_password: None,
             capacity: 1024,
         });
-        let _ = server.start().await;
+        server.start().await
     }
 
     #[tokio::test]
@@ -31,12 +33,18 @@ mod tests {
             cert: None,
             cert_password: None,
         };
+        let callback_fn = |topic: String, message: &[u8]| {
+            println!("topic:{:?} message: {:?}", topic, message);
+            assert_eq!(topic, "abc");
+        };
+
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Tcp(client_type),
+            callback_fn,
         );
         // connect the client.
-        let _ = client.connect().await;
+        client.connect().await.unwrap();
 
         // subscribe to the given topic.
         let result = client
@@ -71,32 +79,36 @@ mod tests {
             cert_password: None,
         };
 
-        // initialize the client.
-        let mut client_sub = simple_pub_sub::client::Client::new(
-            simple_pub_sub::client::PubSubClient::Tcp(client_type),
-        );
-        let mut client_pub = simple_pub_sub::client::Client::new(
-            simple_pub_sub::client::PubSubClient::Tcp(client_type_pub),
-        );
-
-        // connect the client.
-        let _ = client_sub.connect().await;
-        let _ = client_pub.connect().await;
-        let on_msg = |topic: String, message: &[u8]| {
-            println!("topic: {} message: {:?}", topic, message);
+        let callback_fn = |topic: String, message: &[u8]| {
+            println!("topic:{:?} message: {:?}", topic, message);
             assert_eq!(topic, "abc");
         };
 
+        // initialize the client.
+        let mut client_sub = simple_pub_sub::client::Client::new(
+            simple_pub_sub::client::PubSubClient::Tcp(client_type),
+            callback_fn,
+        );
+        let mut client_pub = simple_pub_sub::client::Client::new(
+            simple_pub_sub::client::PubSubClient::Tcp(client_type_pub),
+            callback_fn,
+        );
+
         // connect the client.
-        let _ = client_sub.connect().await;
+        client_sub.connect().await.unwrap();
+        client_pub.connect().await.unwrap();
+
+        // connect the client.
+        client_sub.connect().await.unwrap();
         // subscribe to the given topic.
-        let subscribe_client = client_sub.subscribe("abc".to_string(), on_msg);
-        let _ = client_pub
+        let subscribe_client = client_sub.subscribe("abc".to_string());
+        client_pub
             .publish(
                 "abc".to_string(),
                 "test message".to_string().into_bytes().to_vec(),
             )
-            .await;
+            .await
+            .unwrap();
 
         sleep(Duration::from_millis(500)).await;
 
