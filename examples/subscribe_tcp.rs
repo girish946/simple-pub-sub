@@ -1,5 +1,5 @@
 #[tokio::main]
-async fn main() -> Result<(), String> {
+async fn main() -> Result<(), anyhow::Error> {
     let client_type = simple_pub_sub::client::PubSubTcpClient {
         server: "localhost".to_string(),
         port: 6480,
@@ -8,17 +8,15 @@ async fn main() -> Result<(), String> {
     };
 
     // initialize the client.
-    let mut client =
-        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
+    let mut client = simple_pub_sub::client::Client::new(
+        simple_pub_sub::client::PubSubClient::Tcp(client_type),
+        |topic, message| {
+            println!("topic:{:?} message: {:?}", topic, message);
+        },
+    );
 
-    let on_msg = |topic: String, message: &[u8]| {
-        println!("topic: {} message: {:?}", topic, message);
-        assert_eq!(topic, "abc");
-    };
-
-    // connect the client.
-    let _ = client.connect().await;
+    client.connect().await?;
     // subscribe to the given topic.
-    let _ = client.subscribe("abc".to_string(), on_msg).await;
-    Ok(())
+    client.subscribe("abc".to_string()).await?;
+    client.run().await
 }

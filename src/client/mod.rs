@@ -106,9 +106,13 @@ impl StreamType {
 
 /// Simple pub sub Client
 #[derive(Debug)]
-pub struct Client {
+pub struct Client<F>
+where
+    F: FnMut(String, &[u8]) + Send + 'static,
+{
     pub client_type: PubSubClient,
     stream: Option<StreamType>,
+    callback: F,
 }
 
 /// default implementation for callback function
@@ -123,7 +127,10 @@ pub fn on_message(topic: String, message: Vec<u8>) {
     };
 }
 
-impl Client {
+impl<F> Client<F>
+where
+    F: FnMut(String, &[u8]) + Send + 'static,
+{
     /// Creates a new instance of `Client`
     /// ```
     /// use simple_pub_sub::client::{self, PubSubClient, Client};
@@ -133,15 +140,22 @@ impl Client {
     ///        cert: None,
     ///        cert_password: None,
     /// };
+    /// let callback_fn = |topic: String, message: &[u8]| {
+    ///     let msg_str = String::from_utf8(message.to_vec()).unwrap_or("".to_string());
+    ///     println!("{}: {}", topic, msg_str);
+    /// };
+    ///
     /// // initialize the client.
     /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
     ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///     callback_fn
     /// );
     /// ```
-    pub fn new(client_type: PubSubClient) -> Client {
+    pub fn new(client_type: PubSubClient, callback: F) -> Self {
         Client {
             client_type,
             stream: None,
+            callback,
         }
     }
 
@@ -177,9 +191,15 @@ impl Client {
     ///        cert: None,
     ///        cert_password: None,
     /// };
+    /// let callback_fn = |topic: String, message: &[u8]| {
+    ///     let msg_str = String::from_utf8(message.to_vec()).unwrap_or("".to_string());
+    ///     println!("{}: {}", topic, msg_str);
+    /// };
+    ///
     /// // initialize the client.
     /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
     ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///     callback_fn
     /// );
     /// pub_sub_client.connect();
     /// ```
@@ -216,14 +236,19 @@ impl Client {
     ///          cert: None,
     ///          cert_password: None,
     ///   };
-    ///   // initialize the client.
-    ///   let mut client = simple_pub_sub::client::Client::new(
-    ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
-    ///   );
-    ///   // connect the client.
-    ///   let _ = client.connect();
-    ///   let msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
-    ///   client.post(msg).await.unwrap();
+    /// let callback_fn = |topic: String, message: &[u8]| {
+    ///     let msg_str = String::from_utf8(message.to_vec()).unwrap_or("".to_string());
+    ///     println!("{}: {}", topic, msg_str);
+    /// };
+    ///
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///     callback_fn
+    /// );
+    /// pub_sub_client.connect().await.unwrap();
+    /// let msg = Msg::new(PktType::PUBLISH, "Test".to_string(), Some(b"The message".to_vec()));
+    ///   pub_sub_client.post(msg).await.unwrap();
     /// }
     /// ```
     pub async fn post(&mut self, msg: Msg) -> Result<Vec<u8>> {
@@ -251,18 +276,23 @@ impl Client {
     ///          cert: None,
     ///          cert_password: None,
     ///   };
-    ///   // initialize the client.
-    ///   let mut client = simple_pub_sub::client::Client::new(
-    ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
-    ///   );
-    ///   // connect the client.
-    ///   let _ = client.connect();
-    ///   // subscribe to the given topic.
-    ///   client
-    ///       .publish(
-    ///           "Abc".to_string(),
-    ///           "Test message".to_string().into_bytes().to_vec(),
-    ///       ).await.unwrap();
+    /// let callback_fn = |topic: String, message: &[u8]| {
+    ///     let msg_str = String::from_utf8(message.to_vec()).unwrap_or("".to_string());
+    ///     println!("{}: {}", topic, msg_str);
+    /// };
+    ///
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///     callback_fn
+    /// );
+    /// pub_sub_client.connect().await.unwrap();
+    /// // subscribe to the given topic.
+    /// pub_sub_client
+    ///   .publish(
+    ///     "Abc".to_string(),
+    ///     "Test message".to_string().into_bytes().to_vec(),
+    ///   ).await.unwrap();
     /// }
     /// ```
     pub async fn publish(&mut self, topic: String, message: Vec<u8>) -> Result<()> {
@@ -285,12 +315,18 @@ impl Client {
     ///          cert: None,
     ///          cert_password: None,
     ///   };
-    ///   // initialize the client.
-    ///   let mut pub_sub_client = simple_pub_sub::client::Client::new(
-    ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
-    ///   );
-    ///   pub_sub_client.connect().await;
-    ///   pub_sub_client.query("Test".to_string());
+    /// let callback_fn = |topic: String, message: &[u8]| {
+    ///     let msg_str = String::from_utf8(message.to_vec()).unwrap_or("".to_string());
+    ///     println!("{}: {}", topic, msg_str);
+    /// };
+    ///
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///     callback_fn
+    /// );
+    /// pub_sub_client.connect().await.unwrap();
+    /// pub_sub_client.query("Test".to_string());
     /// }
     /// ```
     pub async fn query(&mut self, topic: String) -> Result<String> {
@@ -318,24 +354,15 @@ impl Client {
     /// // initialize the client.
     /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
     ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
-    /// );
-    /// pub_sub_client.subscribe("Test".to_string(), |topic, message|{
+    ///     |topic, message|{
     ///     println!("topic:{:?} message: {:?}", topic, message);
     /// });
+    /// pub_sub_client.subscribe("Test".to_string());
     /// ```
-    pub async fn subscribe<F>(&mut self, topic: String, mut callback: F) -> Result<()>
-    where
-        F: FnMut(String, &[u8]) + Send + 'static,
-    {
+    pub async fn subscribe(&mut self, topic: String) -> Result<()> {
         let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
         trace!("Msg: {:?}", msg);
-        self.write(msg.bytes()).await?;
-        loop {
-            match self.read_message().await {
-                Ok(m) => callback(m.topic, m.message.as_slice()),
-                Err(e) => return Err(e),
-            }
-        }
+        self.write(msg.bytes()).await
     }
 
     async fn write(&mut self, message: Vec<u8>) -> Result<()> {
@@ -366,11 +393,22 @@ impl Client {
         }
     }
 
-    pub async fn read_message(&mut self) -> Result<message::Msg> {
+    async fn read_message(&mut self) -> Result<Msg> {
         if let Some(stream) = &mut self.stream {
             stream.read_message().await
         } else {
             bail!("Client is not connected yet");
+        }
+    }
+
+    pub async fn run(&mut self) -> Result<()> {
+        loop {
+            if let Some(stream) = &mut self.stream {
+                let msg = stream.read_message().await?;
+                (self.callback)(msg.topic, msg.message.as_slice());
+            } else {
+                bail!("Client is not connected yet");
+            }
         }
     }
 }
