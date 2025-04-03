@@ -1,9 +1,9 @@
+use crate::error::PubSubError::ClientNotConnected;
 use crate::message;
 use crate::message::Msg;
 use crate::stream;
 use crate::Header;
 use crate::PktType;
-use anyhow::bail;
 use anyhow::Result;
 use log::{info, trace};
 use std::fs::File;
@@ -358,6 +358,7 @@ where
     ///     println!("topic:{:?} message: {:?}", topic, message);
     /// });
     /// pub_sub_client.subscribe("Test".to_string());
+    /// pub_sub_client.run();
     /// ```
     pub async fn subscribe(&mut self, topic: String) -> Result<()> {
         let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
@@ -370,7 +371,7 @@ where
             stream.write_all(message).await?;
             Ok(())
         } else {
-            bail!("Client is not connected yet");
+            Err(anyhow::anyhow!(ClientNotConnected))
         }
     }
 
@@ -380,7 +381,7 @@ where
             trace!("Read: {} bytes", size);
             Ok(())
         } else {
-            bail!("Client is not connected yet");
+            Err(anyhow::anyhow!(ClientNotConnected))
         }
     }
     async fn read_buf(&mut self, message: &mut Vec<u8>) -> Result<()> {
@@ -389,25 +390,76 @@ where
             trace!("Read: {} bytes", size);
             Ok(())
         } else {
-            bail!("Client is not connected yet");
+            Err(anyhow::anyhow!(ClientNotConnected))
         }
     }
 
-    async fn read_message(&mut self) -> Result<Msg> {
+    /// reads the incoming message from the server
+    /// useful when you need to read the messages in loop
+    /// ```
+    /// use simple_pub_sub::client::{self, PubSubClient, Client};
+    ///
+    /// async fn read_messages(){
+    ///   let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///          server: "localhost".to_string(),
+    ///          port: 6480,
+    ///          cert: None,
+    ///          cert_password: None,
+    ///   };
+    ///   // initialize the client.
+    ///   let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///       simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///       // not using the callback
+    ///       |_, _|{});
+    ///   pub_sub_client.subscribe("Test".to_string());
+    ///
+    ///   loop {
+    ///       match pub_sub_client.read_message().await{
+    ///           Ok(msg)=>{
+    ///               println!("{}: {:?}", msg.topic, msg.message);
+    ///           }
+    ///           Err(e)=>{
+    ///               println!("error: {:?}", e);
+    ///               break
+    ///           }
+    ///       }
+    ///   }
+    /// }
+    /// ```
+    pub async fn read_message(&mut self) -> Result<Msg> {
         if let Some(stream) = &mut self.stream {
             stream.read_message().await
         } else {
-            bail!("Client is not connected yet");
+            Err(anyhow::anyhow!(ClientNotConnected))
         }
     }
 
+    /// starts reading the messages from the server in a loop.
+    /// should be used when a callback is needed.
+    ///```
+    /// use simple_pub_sub::client::{self, PubSubClient, Client};
+    /// let client_type = simple_pub_sub::client::PubSubTcpClient {
+    ///        server: "localhost".to_string(),
+    ///        port: 6480,
+    ///        cert: None,
+    ///        cert_password: None,
+    /// };
+    /// // initialize the client.
+    /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
+    ///     simple_pub_sub::client::PubSubClient::Tcp(client_type),
+    ///     |topic, message|{
+    ///     println!("topic:{:?} message: {:?}", topic, message);
+    /// });
+    /// pub_sub_client.subscribe("Test".to_string());
+    /// pub_sub_client.run();
+    /// ```
     pub async fn run(&mut self) -> Result<()> {
         loop {
             if let Some(stream) = &mut self.stream {
                 let msg = stream.read_message().await?;
                 (self.callback)(msg.topic, msg.message.as_slice());
             } else {
-                bail!("Client is not connected yet");
+                return Err(anyhow::anyhow!(ClientNotConnected));
             }
         }
     }
