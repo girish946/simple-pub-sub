@@ -1,7 +1,7 @@
 [package]
 name = "simple-pub-sub-message"
 edition = "2021"
-version = "0.1.6"
+version = "0.1.7"
 authors = ["Girish Joshi <mail@girishjoshi.io>"]
 license = "MIT"
 description = "message format for the simple-pub-sub"
