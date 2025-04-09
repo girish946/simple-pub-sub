@@ -110,11 +110,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 return Err("Socket type not supported".into());
             }
 
-            let callback_fn = |topic: String, message: &[u8]| {
-                let msg_str = String::from_utf8(message.to_vec()).unwrap_or("".to_string());
-                println!("{}: {}", topic, msg_str);
-            };
-            let mut client = client::Client::new(client_, callback_fn);
+            let mut client = client::Client::new(client_);
             match client.connect().await {
                 Ok(()) => {}
                 Err(e) => {
@@ -141,7 +137,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     info!("Subscribing to topic '{}'", topic);
 
                     client.subscribe(topic.clone()).await?;
-                    client.run().await?;
+                    loop {
+                        match client.read_message().await {
+                            Ok(msg) => {
+                                println!("{:?}", msg);
+                            }
+                            Err(e) => {
+                                println!("{:?}", e);
+                                break;
+                            }
+                        }
+                    }
                 }
                 ClientType::Query => {
                     info!("Querying topic '{}'", topic);
