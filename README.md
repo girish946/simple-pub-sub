@@ -32,12 +32,15 @@ async fn main() -> Result<(), String> {
     // initialize the client.
     let mut client =
         simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
-    // set the callback function.
-    client.on_message(on_msg);
     // connect the client.
-    let _ = client.connect().await;
+    client.connect().await.unwrap();
     // subscribe to the given topic.
-    let _ = client.subscribe("abc".to_string()).await;
+    client.subscribe("abc".to_string()).await.unwrap();
+    loop{
+        let msg = client.read_message().await().unwrap();
+        println!("{}: {:?}", msg.topic, msg.message)
+    }
+
     Ok(())
 }
 ```
