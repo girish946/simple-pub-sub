@@ -181,7 +181,7 @@ fn completion(shell: &str) {
         }
     };
 
-    let shell = match clap_complete::Shell::from_str(&shell, true) {
+    let shell = match clap_complete::Shell::from_str(shell, true) {
         Ok(shell) => shell,
         Err(_) => {
             eprintln!("Shell not supported {}", shell);
