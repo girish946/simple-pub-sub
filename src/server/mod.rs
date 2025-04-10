@@ -170,7 +170,7 @@ async fn start_tls_server(
     // Bind TCP listener
     let listener = TcpListener::bind(format!("{host}:{port}")).await?;
 
-    println!("Server listening on port 4433");
+    info!("Server listening on port {}:{}", host, port);
     let tx = topics::get_global_broadcaster(capacity);
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
     loop {
