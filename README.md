@@ -33,7 +33,7 @@ async fn main() -> Result<(), String> {
     // subscribe to the given topic.
     client.subscribe("abc".to_string()).await.unwrap();
     loop{
-        let msg = client.read_message().await().unwrap();
+        let msg = client.read_message().await.unwrap();
         println!("{}: {:?}", msg.topic, msg.message)
     }
 

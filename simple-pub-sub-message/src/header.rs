@@ -5,6 +5,7 @@ use crate::{
     PktType,
 };
 use anyhow::{anyhow, bail, Result};
+use log::info;
 
 /// byte at index 0
 /// indicate the start of header
@@ -151,7 +152,7 @@ impl TryFrom<&[u8]> for Header {
     /// ```
 
     fn try_from(bytes: &[u8]) -> Result<Header> {
-        if !bytes.len() == constants::HEADER_LEN {
+        if bytes.len() < constants::HEADER_LEN {
             bail!(HeaderError::InvalidHeaderBufferLength);
         }
 

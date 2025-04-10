@@ -15,8 +15,6 @@ async fn main() -> Result<(), anyhow::Error> {
     // subscribe to the given topic.
     client.subscribe("abc".to_string()).await?;
 
-    client.subscribe("abc".to_string()).await?;
-
     loop {
         select! {
             msg = client.read_message()=>{
