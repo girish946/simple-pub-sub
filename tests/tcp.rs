@@ -19,11 +19,8 @@ mod tests {
         server.start().await
     }
 
-    #[tokio::test]
     async fn client_publish() {
         env_logger::init();
-
-        let server = tokio::spawn(start_serever());
         sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
@@ -49,12 +46,9 @@ mod tests {
         info!("{:?}", result);
 
         assert!(result.is_ok());
-        std::mem::drop(server);
     }
 
-    #[tokio::test]
     async fn client_subscribe() {
-        let server = tokio::spawn(start_serever());
         sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
@@ -95,6 +89,14 @@ mod tests {
 
         let msg = client_sub.read_message().await.unwrap();
         assert!(msg.topic == "abc");
+    }
+
+    #[tokio::test]
+    async fn test_all() {
+        let server = tokio::spawn(start_serever());
+        sleep(Duration::from_millis(500)).await;
+        client_publish().await;
+        client_subscribe().await;
         std::mem::drop(server);
     }
 }
