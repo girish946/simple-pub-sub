@@ -170,12 +170,12 @@ async fn start_tls_server(
     // Bind TCP listener
     let listener = TcpListener::bind(format!("{host}:{port}")).await?;
 
-    println!("Server listening on port 4433");
+    info!("Server listening on port {}:{}", host, port);
     let tx = topics::get_global_broadcaster(capacity);
     let _topic_handler = tokio::spawn(topics::topic_manager(tx.clone()));
     loop {
         let (stream, addr) = listener.accept().await?;
-        println!("Accepted connection from {:?}", addr);
+        info!("Accepted connection from {:?}", addr);
         let acceptor = acceptor.clone();
         let tls_stream = acceptor.accept(stream).await?;
         client_handler::handle_client(tls_stream, tx.clone()).await;
