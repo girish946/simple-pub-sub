@@ -19,10 +19,6 @@ To subscribe
 ```rust
 use simple-pub-sub
 
-// define the on_message function (callback).
-pub fn on_msg(topic: String, message: Vec<u8>) {
-    println!("topic: {} message: {:?}", topic, message)
-}
 #[tokio::main]
 async fn main() -> Result<(), String> {
     let client_type = simple_pub_sub::client::PubSubTcpClient {
