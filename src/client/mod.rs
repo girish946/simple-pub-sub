@@ -322,7 +322,6 @@ impl Client {
     /// let mut pub_sub_client = simple_pub_sub::client::Client::new(
     ///     simple_pub_sub::client::PubSubClient::Tcp(client_type));
     /// pub_sub_client.subscribe("Test".to_string());
-    /// pub_sub_client.run();
     /// ```
     pub async fn subscribe(&mut self, topic: String) -> Result<()> {
         let msg: message::Msg = message::Msg::new(PktType::SUBSCRIBE, topic, None);
@@ -373,8 +372,8 @@ impl Client {
     ///   // initialize the client.
     ///   let mut pub_sub_client = simple_pub_sub::client::Client::new(
     ///       simple_pub_sub::client::PubSubClient::Tcp(client_type));
-    ///   pub_sub_client.connect().await?;
-    ///   pub_sub_client.subscribe("Test".to_string()).await?;
+    ///   pub_sub_client.connect().await.unwrap();
+    ///   pub_sub_client.subscribe("Test".to_string()).await.unwrap();
     ///
     ///   loop {
     ///       match pub_sub_client.read_message().await{

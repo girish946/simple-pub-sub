@@ -6,9 +6,6 @@ async fn main() -> Result<(), anyhow::Error> {
     // initialize the client.
     let mut client = simple_pub_sub::client::Client::new(
         simple_pub_sub::client::PubSubClient::Unix(client_type),
-        |topic, message| {
-            println!("topic:{:?} message: {:?}", topic, message);
-        },
     );
 
     client.connect().await?;
