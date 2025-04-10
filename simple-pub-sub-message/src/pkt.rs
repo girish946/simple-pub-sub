@@ -13,11 +13,11 @@ pub enum PktType {
     UNSUBSCRIBE = UNSUBSCRIBE,
     /// query the topics
     QUERY = QUERY,
-    /// acknoledgement to publish
+    /// acknowledgement to publish
     PUBLISHACK = PUBLISHACK,
-    /// acknoledgement to subscribe
+    /// acknowledgement to subscribe
     SUBSCRIBEACK = SUBSCRIBEACK,
-    /// acknoledgement to unsubscribe
+    /// acknowledgement to unsubscribe
     UNSUBSCRIBEACK = UNSUBSCRIBEACK,
     /// response to the query packet
     QUERYRESP = QUERYRESP,
