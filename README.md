@@ -12,7 +12,7 @@ So it's a 8 byte header followed by the topic and message.
 
 ## API Usage
 
-To subscribe
+To subscribe to a topic
 
 ### Client
 
