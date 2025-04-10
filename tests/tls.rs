@@ -62,13 +62,9 @@ mod tests {
         let _ = server.start().await;
     }
 
-    #[tokio::test]
     async fn tls_client_publish() {
         env_logger::init();
-        create_tls_certs().await;
 
-        let server = tokio::spawn(start_serever());
-        sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6481,
@@ -91,16 +87,10 @@ mod tests {
             )
             .await;
 
-        // sleep(Duration::from_millis(5000)).await;
         assert!(result.is_ok());
-        std::mem::drop(server);
     }
-    #[tokio::test]
-    async fn tls_client_subscribe() {
-        create_tls_certs().await;
 
-        let server = tokio::spawn(start_serever());
-        sleep(Duration::from_millis(500)).await;
+    async fn tls_client_subscribe() {
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6481,
@@ -141,6 +131,15 @@ mod tests {
 
         let msg = client_sub.read_message().await.unwrap();
         assert!(msg.topic == "abc");
+    }
+
+    #[tokio::test]
+    async fn test_all() {
+        create_tls_certs().await;
+        let server = tokio::spawn(start_serever());
+        sleep(Duration::from_millis(500)).await;
+        tls_client_publish().await;
+        tls_client_subscribe().await;
         std::mem::drop(server);
     }
 }
