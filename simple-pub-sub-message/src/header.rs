@@ -5,7 +5,6 @@ use crate::{
     PktType,
 };
 use anyhow::{anyhow, bail, Result};
-use log::info;
 
 /// byte at index 0
 /// indicate the start of header
@@ -119,7 +118,6 @@ impl Header {
     /// let header = Header::new(PktType::PUBLISH, 8, 20);
     /// header.bytes();
     ///```
-
     pub fn bytes(&self) -> [u8; 8] {
         let message_length_bytes = self.message_length.to_be_bytes();
         [
@@ -150,7 +148,6 @@ impl TryFrom<&[u8]> for Header {
     ///        0,     // `PADDING_BYTE`
     /// ].as_ref());
     /// ```
-
     fn try_from(bytes: &[u8]) -> Result<Header> {
         if bytes.len() < constants::HEADER_LEN {
             bail!(HeaderError::InvalidHeaderBufferLength);

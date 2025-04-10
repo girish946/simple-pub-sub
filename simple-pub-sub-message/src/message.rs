@@ -107,7 +107,6 @@ impl Msg {
 /// let mut msg = Msg::new(PktType::PUBLISHACK, "Test".to_string(), Some(b"".to_vec()));
 /// let response_msg = get_msg_response(msg);
 /// ```
-
 pub fn get_msg_response(msg: Msg) -> Result<Vec<u8>> {
     let mut resp: Vec<u8> = msg.response_msg(msg.message.clone())?.bytes();
     resp.extend(msg.topic.bytes());
@@ -135,7 +134,6 @@ impl TryFrom<&[u8]> for Msg {
     /// let msg = Msg::try_from(buf.as_ref()).unwrap();
     /// println!("{:?}", msg);
     /// ```
-
     fn try_from(bytes: &[u8]) -> Result<Msg> {
         let header = Header::try_from(bytes[..8].as_ref())?;
         let topic: String = String::from_utf8(bytes[8..(8 + header.topic_length).into()].to_vec())?;
