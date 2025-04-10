@@ -7,12 +7,8 @@ async fn main() -> Result<(), anyhow::Error> {
         cert_password: None,
     };
     // initialize the client.
-    let mut client = simple_pub_sub::client::Client::new(
-        simple_pub_sub::client::PubSubClient::Tcp(client_type),
-        |topic, message| {
-            println!("topic:{:?} message: {:?}", topic, message);
-        },
-    );
+    let mut client =
+        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
 
     client.connect().await?;
     // publish to the given topic.

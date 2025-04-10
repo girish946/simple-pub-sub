@@ -20,6 +20,7 @@ path = "src/lib.rs"
 name = "simple-pub-sub"
 path = "src/main.rs"
 
+
 [workspace]
 members = ["simple-pub-sub-message"]
 

@@ -66,7 +66,6 @@ mod tests {
     async fn tls_client_publish() {
         env_logger::init();
         create_tls_certs().await;
-        sleep(Duration::from_millis(500)).await;
 
         let server = tokio::spawn(start_serever());
         sleep(Duration::from_millis(500)).await;
@@ -76,15 +75,10 @@ mod tests {
             cert: Some("certs/cert.pem".to_string()),
             cert_password: Some("password".to_string()),
         };
-        let callback_fn = |topic: String, message: &[u8]| {
-            println!("topic:{:?} message: {:?}", topic, message);
-            assert_eq!(topic, "abc");
-        };
 
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Tcp(client_type),
-            callback_fn,
         );
         // connect the client.
         let _ = client.connect().await;
@@ -97,14 +91,13 @@ mod tests {
             )
             .await;
 
-        sleep(Duration::from_millis(5000)).await;
+        // sleep(Duration::from_millis(5000)).await;
         assert!(result.is_ok());
         std::mem::drop(server);
     }
     #[tokio::test]
     async fn tls_client_subscribe() {
         create_tls_certs().await;
-        sleep(Duration::from_millis(500)).await;
 
         let server = tokio::spawn(start_serever());
         sleep(Duration::from_millis(500)).await;
@@ -120,19 +113,13 @@ mod tests {
             cert: Some("certs/cert.pem".to_string()),
             cert_password: Some("password".to_string()),
         };
-        let callback_fn = |topic: String, message: &[u8]| {
-            println!("topic:{:?} message: {:?}", topic, message);
-            assert_eq!(topic, "abc");
-        };
 
         // initialize the client.
         let mut client_sub = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Tcp(client_type),
-            callback_fn,
         );
         let mut client_pub = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Tcp(client_type_pub),
-            callback_fn,
         );
 
         // connect the client.
@@ -143,7 +130,7 @@ mod tests {
         client_sub.connect().await.unwrap();
         // subscribe to the given topic.
         client_sub.subscribe("abc".to_string()).await.unwrap();
-        let client_run = client_sub.run();
+
         client_pub
             .publish(
                 "abc".to_string(),
@@ -152,9 +139,8 @@ mod tests {
             .await
             .unwrap();
 
-        sleep(Duration::from_millis(500)).await;
-
+        let msg = client_sub.read_message().await.unwrap();
+        assert!(msg.topic == "abc");
         std::mem::drop(server);
-        std::mem::drop(client_run);
     }
 }
