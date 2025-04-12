@@ -8,7 +8,7 @@ description = "message format for the simple-pub-sub"
 readme = "README.md"
 keywords = ["simple", "message", "broker", "pub-sub"]
 repository = "https://github.com/girish946/simple-pub-sub"
-categories = ["command-line-interface", "command-line-utilities", "message-bus"]
+categories = ["parsing"]
 
 [dependencies]
 thiserror = "2.0.12"
