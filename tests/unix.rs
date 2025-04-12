@@ -10,6 +10,7 @@ mod tests {
         println!("server started");
         let server = simple_pub_sub::server::ServerType::Unix(simple_pub_sub::server::Unix {
             path: addr.clone(),
+            capacity: 1024,
         });
         let result = server.start().await;
 
@@ -24,8 +25,9 @@ mod tests {
         let path = "/tmp/sample2.sock".to_string();
 
         let server = tokio::spawn(start_serever(path.clone()));
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubUnixClient { path };
+
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Unix(client_type),
@@ -42,7 +44,7 @@ mod tests {
             .await;
         info!("{:?}", result);
         std::mem::drop(server);
-        sleep(Duration::from_millis(5000)).await;
+        sleep(Duration::from_millis(500)).await;
         assert!(result.is_ok());
     }
 
@@ -52,9 +54,10 @@ mod tests {
         let path = "/tmp/sock1.sock".to_string();
 
         let server = tokio::spawn(start_serever(path.clone()));
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(500)).await;
         let client_type = simple_pub_sub::client::PubSubUnixClient { path: path.clone() };
         let client_type_pub = simple_pub_sub::client::PubSubUnixClient { path };
+
         // initialize the client.
         let mut client_sub = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Unix(client_type),
@@ -64,18 +67,14 @@ mod tests {
         );
 
         // connect the client.
-        let _ = client_sub.connect().await;
-        let _ = client_pub.connect().await;
-        pub fn on_msg(topic: String, message: Vec<u8>) {
-            println!("topic: {} message: {:?}", topic, message);
-            assert_eq!(topic, "abc");
-        }
+        client_sub.connect().await.unwrap();
+        client_pub.connect().await.unwrap();
 
-        client_sub.on_message(on_msg);
         // connect the client.
         let _ = client_sub.connect().await;
         // subscribe to the given topic.
-        let subscribe_client = client_sub.subscribe("abc".to_string());
+        client_sub.subscribe("abc".to_string()).await.unwrap();
+
         let _ = client_pub
             .publish(
                 "abc".to_string(),
@@ -83,8 +82,10 @@ mod tests {
             )
             .await;
 
+        let msg = client_sub.read_message().await.unwrap();
+        assert!(msg.topic == "abc");
+
         std::mem::drop(server);
-        std::mem::drop(subscribe_client);
-        sleep(Duration::from_millis(5000)).await;
+        sleep(Duration::from_millis(500)).await;
     }
 }

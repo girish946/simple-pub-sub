@@ -42,7 +42,6 @@ async fn create_tls_certs() {
 mod tests {
 
     use super::*;
-    use log::info;
 
     async fn start_serever() {
         let host = "0.0.0.0".to_string();
@@ -57,26 +56,22 @@ mod tests {
                 port,
                 cert: Some(cert.clone()),
                 cert_password: Some(password.clone()),
+                capacity: 1024,
             }),
         };
         let _ = server.start().await;
     }
 
-    #[tokio::test]
     async fn tls_client_publish() {
-        // std::env::set_var("RUST_LOG", "trace");
         env_logger::init();
-        create_tls_certs().await;
-        sleep(Duration::from_millis(5000)).await;
 
-        let server = tokio::spawn(start_serever());
-        sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6481,
             cert: Some("certs/cert.pem".to_string()),
             cert_password: Some("password".to_string()),
         };
+
         // initialize the client.
         let mut client = simple_pub_sub::client::Client::new(
             simple_pub_sub::client::PubSubClient::Tcp(client_type),
@@ -91,21 +86,11 @@ mod tests {
                 "test message".to_string().into_bytes().to_vec(),
             )
             .await;
-        info!("{:?}", result);
 
-        sleep(Duration::from_millis(1000)).await;
         assert!(result.is_ok());
-        std::mem::drop(server);
     }
-    #[tokio::test]
+
     async fn tls_client_subscribe() {
-        // std::env::set_var("RUST_LOG", "trace");
-
-        create_tls_certs().await;
-        sleep(Duration::from_millis(5000)).await;
-
-        let server = tokio::spawn(start_serever());
-        sleep(Duration::from_millis(1000)).await;
         let client_type = simple_pub_sub::client::PubSubTcpClient {
             server: "localhost".to_string(),
             port: 6481,
@@ -128,27 +113,33 @@ mod tests {
         );
 
         // connect the client.
-        let _ = client_sub.connect().await;
-        let _ = client_pub.connect().await;
-        pub fn on_msg(topic: String, message: Vec<u8>) {
-            println!("topic: {} message: {:?}", topic, message);
-            assert_eq!(topic, "abc");
-        }
+        client_sub.connect().await.unwrap();
+        client_pub.connect().await.unwrap();
 
-        client_sub.on_message(on_msg);
         // connect the client.
-        let _ = client_sub.connect().await;
+        client_sub.connect().await.unwrap();
         // subscribe to the given topic.
-        let subscribe_client = client_sub.subscribe("abc".to_string());
-        let _ = client_pub
+        client_sub.subscribe("abc".to_string()).await.unwrap();
+
+        client_pub
             .publish(
                 "abc".to_string(),
                 "test message".to_string().into_bytes().to_vec(),
             )
-            .await;
+            .await
+            .unwrap();
 
-        sleep(Duration::from_millis(1000)).await;
+        let msg = client_sub.read_message().await.unwrap();
+        assert!(msg.topic == "abc");
+    }
+
+    #[tokio::test]
+    async fn test_all() {
+        create_tls_certs().await;
+        let server = tokio::spawn(start_serever());
+        sleep(Duration::from_millis(500)).await;
+        tls_client_publish().await;
+        tls_client_subscribe().await;
         std::mem::drop(server);
-        std::mem::drop(subscribe_client);
     }
 }

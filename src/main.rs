@@ -1,6 +1,6 @@
 pub mod cli;
 use crate::cli::{Cli, ClientType, Commands, LogLevel, ServerType};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use log::{error, info};
 use simple_pub_sub::server::ServerTrait as _;
 use simple_pub_sub::{client, server};
@@ -22,6 +22,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     env::set_var("RUST_LOG", log_level);
     env_logger::init();
 
+    let queue_capacity = cli.capacity.unwrap_or(1024);
+
     match &cli.command {
         Commands::Server { server_type } => match server_type {
             ServerType::Tcp {
@@ -35,13 +37,26 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     port: *port,
                     cert: cert.clone(),
                     cert_password: cert_password.clone(),
+                    capacity: queue_capacity,
                 };
-                let result = server.start().await;
-                info!("{:?}", result);
+                match server.start().await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("{:?}", e);
+                    }
+                };
             }
             ServerType::Unix { path } => {
-                let result = server::Unix { path: path.clone() }.start().await;
-                info!("{:?}", result);
+                let server = server::Unix {
+                    path: path.clone(),
+                    capacity: queue_capacity,
+                };
+                match server.start().await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        error!("{:?}", e);
+                    }
+                };
             }
         },
         Commands::Client {
@@ -84,7 +99,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     None => 6480,
                 };
                 let addr = format!("{server}:{port}");
-                info!("connecting to: {addr}");
+                info!("Connecting to: {addr}");
                 client_ = client::PubSubClient::Tcp(client::PubSubTcpClient {
                     server: server.clone(),
                     port,
@@ -92,19 +107,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     cert_password,
                 });
             } else {
-                return Err("socket type not supported".into());
+                return Err("Socket type not supported".into());
             }
 
             let mut client = client::Client::new(client_);
             match client.connect().await {
                 Ok(()) => {}
                 Err(e) => {
-                    error!("{}", e.to_string());
+                    error!("{:?}", e);
+
                     return Ok(());
                 }
             };
-
-            client.on_message(client::on_message);
 
             match client_type {
                 ClientType::Publish => {
@@ -117,11 +131,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
                         Some(msg) => msg.as_bytes().to_vec(),
                         None => vec![],
                     };
-                    let _ = client.publish(topic.clone(), msg).await;
+                    client.publish(topic.clone(), msg).await?;
                 }
                 ClientType::Subscribe => {
                     info!("Subscribing to topic '{}'", topic);
-                    let _ = client.subscribe(topic.clone()).await;
+
+                    client.subscribe(topic.clone()).await?;
+                    loop {
+                        match client.read_message().await {
+                            Ok(msg) => {
+                                println!("{:?}", msg);
+                            }
+                            Err(e) => {
+                                println!("{:?}", e);
+                                break;
+                            }
+                        }
+                    }
                 }
                 ClientType::Query => {
                     info!("Querying topic '{}'", topic);
@@ -130,12 +156,38 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             info!("{}", resp)
                         }
                         Err(e) => {
-                            error!("{}", e.to_string())
+                            error!("{:?}", e)
                         }
                     };
                 }
             }
         }
+        Commands::Completion { shell } => {
+            completion(shell);
+        }
     }
     Ok(())
+}
+
+fn completion(shell: &str) {
+    use clap::CommandFactory;
+    let mut cmd = Cli::command();
+    let man = clap_mangen::Man::new(cmd.clone());
+    let mut buffer: Vec<u8> = Default::default();
+    match man.render(&mut buffer) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error while generating the completions:{}", e);
+        }
+    };
+
+    let shell = match clap_complete::Shell::from_str(shell, true) {
+        Ok(shell) => shell,
+        Err(_) => {
+            eprintln!("Shell not supported {}", shell);
+            return;
+        }
+    };
+    let bin_name = "simple-pub-sub";
+    clap_complete::generate(shell, &mut cmd, bin_name, &mut std::io::stdout());
 }

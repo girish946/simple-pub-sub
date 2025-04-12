@@ -10,6 +10,79 @@ The message frame looks like
 
 So it's a 8 byte header followed by the topic and message.
 
+## API Usage
+
+To subscribe to a topic
+
+### Client
+
+```rust
+use simple-pub-sub
+
+#[tokio::main]
+async fn main() -> Result<(), String> {
+    let client_type = simple_pub_sub::client::PubSubTcpClient {
+        server: "localhost".to_string(),
+        port: 6480,
+    };
+    // initialize the client.
+    let mut client =
+        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
+    // connect the client.
+    client.connect().await.unwrap();
+    // subscribe to the given topic.
+    client.subscribe("abc".to_string()).await.unwrap();
+    loop{
+        let msg = client.read_message().await.unwrap();
+        println!("{}: {:?}", msg.topic, msg.message)
+    }
+
+    Ok(())
+}
+```
+
+To publish a message
+
+```rust
+use simple_pub_sub;
+async fn main() -> Result<(), String> {
+    let client_type = simple_pub_sub::client::PubSubTcpClient {
+        server: "localhost".to_string(),
+        port: 6480,
+    };
+    // initialize the client.
+    let mut client =
+        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
+    // connect the client.
+    let _ = client.connect().await;
+    // subscribe to the given topic.
+    let _ = client
+        .publish(
+            "abc".to_string(),
+            "test message".to_string().into_bytes().to_vec(),
+        )
+        .await;
+    Ok(())
+}
+```
+
+### Server
+
+```rust
+use simple_pub_sub;
+async fn main(){
+  let server = simple_pub_sub::server::ServerType::Tcp(
+      simple_pub_sub::server::Tcp {
+        host: "localhost".to_string(),
+        port: 6480,
+        cert: None,
+        cert_password: None,
+        capacity: 1024,
+      });
+  server.start().await;
+}
+```
+
 ## Cli Usage
 
 - Server:
@@ -107,57 +180,17 @@ So it's a 8 byte header followed by the topic and message.
         simple-pub-sub client unix /tmp/pubsub.sock query the_topic --log-level trace
         ```
 
-## API Usage
+### Shell completion
 
-To subscribe
+Supported shells: `bash`, `zsh`, `fish`, `Elvish`, `Powershell`
+To add the shell completions, run
 
-```rust
-use simple-pub-sub
-
-// define the on_message function (callback).
-pub fn on_msg(topic: String, message: Vec<u8>) {
-    println!("topic: {} message: {:?}", topic, message)
-}
-#[tokio::main]
-async fn main() -> Result<(), String> {
-    let client_type = simple_pub_sub::client::PubSubTcpClient {
-        server: "localhost".to_string(),
-        port: 6480,
-    };
-    // initialize the client.
-    let mut client =
-        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
-    // set the callback function.
-    client.on_message(on_msg);
-    // connect the client.
-    let _ = client.connect().await;
-    // subscribe to the given topic.
-    let _ = client.subscribe("abc".to_string()).await;
-    Ok(())
-}
+```bash
+simple-pub-sub completion <shell> 
 ```
 
-To publish a message
+To add the shell completions to `.bashrc`
 
-```rust
-use simple_pub_sub;
-async fn main() -> Result<(), String> {
-    let client_type = simple_pub_sub::client::PubSubTcpClient {
-        server: "localhost".to_string(),
-        port: 6480,
-    };
-    // initialize the client.
-    let mut client =
-        simple_pub_sub::client::Client::new(simple_pub_sub::client::PubSubClient::Tcp(client_type));
-    // connect the client.
-    let _ = client.connect().await;
-    // subscribe to the given topic.
-    let _ = client
-        .publish(
-            "abc".to_string(),
-            "test message".to_string().into_bytes().to_vec(),
-        )
-        .await;
-    Ok(())
-}
+```bash
+source <(simple-pub-sub completion bash) >> ~/.bashrc
 ```

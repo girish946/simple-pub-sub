@@ -1,6 +1,6 @@
 [package]
 name = "simple-pub-sub"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2021"
 authors = ["Girish Joshi <mail@girishjoshi.io>"]
 license = "MIT"
@@ -20,7 +20,12 @@ path = "src/lib.rs"
 name = "simple-pub-sub"
 path = "src/main.rs"
 
+
+[workspace]
+members = ["simple-pub-sub-message"]
+
 [dependencies]
+simple-pub-sub-message = { path = "./simple-pub-sub-message/" }
 tokio = { version = "1", features = ["full", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -33,6 +38,10 @@ tokio-native-tls = "0.3"
 native-tls = "0.2"
 tokio-stream = "0.1"
 openssl = "0.10.66"
+anyhow = "1.0.97"
+thiserror = "2.0.12"
+clap_mangen = "0.2.20"
+clap_complete = "4.5.2"
 
 [build-dependencies]
 clap = { version = "4.4.11", features = ["derive", "cargo"] }

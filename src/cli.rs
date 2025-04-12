@@ -53,6 +53,10 @@ pub struct Cli {
     /// log level, default: info
     #[clap(long, global = true)]
     pub log_level: Option<LogLevel>,
+
+    /// queue size
+    #[clap(short = 'C', long, global = true)]
+    pub capacity: Option<usize>,
 }
 
 /// the subcommands
@@ -76,4 +80,7 @@ pub enum Commands {
         /// message to be published
         message: Option<String>,
     },
+    /// bash completions
+    /// supported shells: [bash, zsh, fish, Elvish, Powershell]
+    Completion { shell: String },
 }
