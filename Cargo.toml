@@ -25,7 +25,7 @@ path = "src/main.rs"
 members = ["simple-pub-sub-message"]
 
 [dependencies]
-simple-pub-sub-message = { path = "./simple-pub-sub-message/" }
+simple-pub-sub-message = { path = "./simple-pub-sub-message/", version = "0.1.7" }
 tokio = { version = "1", features = ["full", "tracing"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
